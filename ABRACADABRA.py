@@ -671,8 +671,8 @@ def short_rheo(file_name, f, step):
     global spinbox_dvdt
     if file_name == "No File Chosen":
         return
-    print("Short_Rheo Data:")
-    f.write("Short_Rheo Data:")
+    print("Short_Rheo " + step + " Data:")
+    f.write("Short_Rheo " + step + " Data:")
     f.write('\n')
     abf = pyabf.ABF(file_name)
     sweep_number = -1
@@ -694,7 +694,7 @@ def short_rheo(file_name, f, step):
     sweep_x_d = sweep_x[1:len(sweep_x)]
     sweep_y_1 = sweep_y[1:len(sweep_y)]
 
-    phase_plane(sweep_x_d, sweep_y_1, sweep_y_d)
+    phase_plane(sweep_x_d, sweep_y_1, sweep_y_d, step)
     # ax1 = plt.subplot()
     # ax1.set_ylabel(abf.sweepLabelY)
     # ax1.set_xlabel(abf.sweepLabelX)
@@ -925,19 +925,32 @@ def short_rheo(file_name, f, step):
 
 
 def phase_plane(sweep_x, sweep_y, sweep_y_d, step):
-    global phase_plane_bool
-    global output_file_path_pp
+    global phase_plane_bool_5ms
+    global phase_plane_bool_1s
+    global output_file_path_pp_5ms
+    global output_file_path_pp_1s
     global final_directory
-    phase_plane_bool = 1
+
     output_file_name = no_spaces(output_file_entry.get())
-    output_file_name_pp = output_file_name +"_" +  step + "_phase_plane_table.csv"
-    output_file_path_pp = os.path.join(final_directory, output_file_name_pp)
-    with open(output_file_path_pp, 'w') as b:
-        b.write("time, V, dV/dt")
-        b.write('\n')
-        for i in range(len(sweep_y_d)):
-            b.write(str(sweep_x[i]) + ", " + str(sweep_y[i]) + ", " + str(sweep_y_d[i]))
+    output_file_name_pp = output_file_name + "_" + step + "_phase_plane_table.csv"
+    if step == "5ms":
+        phase_plane_bool_5ms = 1
+        output_file_path_pp_5ms = os.path.join(final_directory, output_file_name_pp)
+        with open(output_file_path_pp_5ms, 'w') as b:
+            b.write("time, V, dV/dt")
             b.write('\n')
+            for i in range(len(sweep_y_d)):
+                b.write(str(sweep_x[i]) + ", " + str(sweep_y[i]) + ", " + str(sweep_y_d[i]))
+                b.write('\n')
+    elif step == "1s":
+        phase_plane_bool_1s = 1
+        output_file_path_pp_1s = os.path.join(final_directory, output_file_name_pp)
+        with open(output_file_path_pp_1s, 'w') as b:
+            b.write("time, V, dV/dt")
+            b.write('\n')
+            for i in range(len(sweep_y_d)):
+                b.write(str(sweep_x[i]) + ", " + str(sweep_y[i]) + ", " + str(sweep_y_d[i]))
+                b.write('\n')    
     plt.clf()
     plt.grid()
     ax1 = plt.subplot()
@@ -946,14 +959,14 @@ def phase_plane(sweep_x, sweep_y, sweep_y_d, step):
     ax1.set_xlabel("V")
     # ax2.set_ylabel(abf.sweepLabelC)
     ax1.plot(sweep_y, sweep_y_d, alpha=.5)
-    image_name = no_spaces(output_file_entry.get()) + "_phase_plane_plot.png"
+    image_name = no_spaces(output_file_entry.get()) + "_" + step +"_phase_plane_plot.png"
     image_path = os.path.join(final_directory, image_name)
     plt.savefig(image_path)
 
 
 def callback():
-    global phase_plane_bool
-    global output_file_path_pp
+    global phase_plane_bool_5ms
+    global phase_plane_bool_1s
     global final_directory
     output_file_name = no_spaces(output_file_entry.get())
     output_folder_name = output_file_name + "_outputs"
@@ -972,10 +985,12 @@ def callback():
         short_rheo(filename7, f, "1s")
         print("Done")
     os.system("start EXCEL.EXE " + output_file_path)
-    if phase_plane_bool == 1:
-
-        os.system("start EXCEL.EXE " + output_file_path_pp)
-        phase_plane_bool = 0
+    if phase_plane_bool_5ms == 1:
+        os.system("start EXCEL.EXE " + output_file_path_pp_5ms)
+        phase_plane_bool_5ms = 0
+    if phase_plane_bool_1s == 1:
+        os.system("start EXCEL.EXE " + output_file_path_pp_1s)
+        phase_plane_bool_1s = 0
 
 
 filename1 = "No File Chosen"
@@ -986,9 +1001,12 @@ filename5 = "No File Chosen"
 filename6 = "No File Chosen"
 filename7 = "No File Chosen"
 
+final_directory = ""
+output_file_path_pp_5ms = ""
+output_file_path_pp_1s = ""
 buttonClicked = False
-phase_plane_bool = 0
-output_file_path_pp = ""
+phase_plane_bool_5ms = 0
+phase_plane_bool_1s = 0
 window = tk.Tk()
 window.title("ABRACADABRA")
 window.geometry('550x500')
