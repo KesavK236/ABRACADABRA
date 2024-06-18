@@ -1015,7 +1015,7 @@ def phase_plane(sweep_x, sweep_y, sweep_y_d, step):
     output_file_name = no_spaces(output_file_entry.get())
     output_file_name_pp = output_file_name + "_" + step + "_phase_plane_table.csv"
     if step == "5ms":
-        phase_plane_bool_5ms = 1
+        phase_plane_bool_5ms = True
         output_file_path_pp_5ms = os.path.join(final_directory, output_file_name_pp)
         with open(output_file_path_pp_5ms, 'w') as b:
             b.write("time, V, dV/dt")
@@ -1024,7 +1024,7 @@ def phase_plane(sweep_x, sweep_y, sweep_y_d, step):
                 b.write(str(sweep_x[i]) + ", " + str(sweep_y[i]) + ", " + str(sweep_y_d[i]))
                 b.write('\n')
     elif step == "1s":
-        phase_plane_bool_1s = 1
+        phase_plane_bool_1s = True
         output_file_path_pp_1s = os.path.join(final_directory, output_file_name_pp)
         with open(output_file_path_pp_1s, 'w') as b:
             b.write("time, V, dV/dt")
@@ -1067,12 +1067,12 @@ def callback():
         short_rheo(filename6, f, "5ms")
         short_rheo(filename7, f, "1s")
     os.system("start EXCEL.EXE " + output_file_path)
-    if phase_plane_bool_5ms == 1:
+    if phase_plane_bool_5ms == True:
         os.system("start EXCEL.EXE " + output_file_path_pp_5ms)
-        phase_plane_bool_5ms = 0
-    if phase_plane_bool_1s == 1:
+        phase_plane_bool_5ms = False
+    if phase_plane_bool_1s == True:
         os.system("start EXCEL.EXE " + output_file_path_pp_1s)
-        phase_plane_bool_1s = 0
+        phase_plane_bool_1s = False
 
 #     Conversion
     # Metadata info
@@ -1184,8 +1184,8 @@ final_directory = ""
 output_file_path_pp_5ms = ""
 output_file_path_pp_1s = ""
 buttonClicked = False
-phase_plane_bool_5ms = 0
-phase_plane_bool_1s = 0
+phase_plane_bool_5ms = False
+phase_plane_bool_1s = False
 
 window = tk.Tk()
 window.title("ABRACADABRA")
