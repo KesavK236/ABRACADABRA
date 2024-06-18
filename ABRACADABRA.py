@@ -76,7 +76,7 @@ def gui():
     label_dvdt = tk.Label(window, text="Threshold dV/dt in mV/ms", font=("Arial", 10))
     label_title = tk.Label(window, text="ABRACADABRA", font=100)
     label_output_name = tk.Label(window, text="Output File Name:", font=("Arial", 10))
-    output_file_entry = tk.Entry(window, textvariable=output_file_name_variable, width=50, justify="center")
+    output_file_entry = tk.Entry(window, textvariable=output_file_name_variable, width=40, justify="center")
 
     # conversion GUI Widgets
     check_conversion = tk.Checkbutton(window, text='Convert to NWB file', command=gui,variable=conversion_bool,
@@ -145,7 +145,7 @@ def gui():
     check_conversion.grid(row=10, column=3)
     # label_spacer.grid(row=11, column=0)
     label_output_name.grid(row=25, column=3)
-    output_file_entry.grid(row=26, column=2, columnspan=3, sticky='W')
+    output_file_entry.grid(row=26, column=2, columnspan=3, padx=20)
     button_enter.grid(row=27, column=3, pady=5)   
 
     if conversion_bool.get() == 1:
