@@ -1180,7 +1180,7 @@ phase_plane_bool_1s = 0
 window = tk.Tk()
 window.title("ABRACADABRA")
 window.geometry('550x500')
-window.iconbitmap("ABF Analyzer Icon.ico")
+window.iconbitmap("ABRACADABRA.ico")
 conversion_bool = tk.IntVar()
 spinval = tk.StringVar()
 spinval.set("5")
