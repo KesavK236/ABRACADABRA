@@ -76,7 +76,7 @@ def gui():
     # conversion GUI Widgets
     check_conversion = tk.Checkbutton(window, text='Convert to NWB file', command=gui,variable=conversion_bool,
 	    onvalue=1, offvalue=0)
-    label_conversion = tk.Label(window, text="Conversion will take a few minutes", font=("Arial", 12))
+    label_conversion = tk.Label(window, text="Conversion will take a few minutes", fg='red', font=("Arial", 12))
     label_cell_id = tk.Label(window, text="Cell ID:", font=("Ariel", 10))
     text_cell_id = tk.Entry(window, textvariable=cell_id, width=30)
     label_slice_id = tk.Label(window, text="Slice ID:", font=("Ariel", 10))
@@ -175,16 +175,20 @@ def gui():
 
 def file_name_presentation(file_name):
     j = len(file_name) - 1
-    while file_name[j] != "/" and j > -1:
-        j -= 1
-    return file_name[j + 1:len(file_name)]
+    if j == -1 :
+        return "No File Chosen"
+    else:
+        while file_name[j] != "/" and j > -1:
+            j -= 1
+        return file_name[j + 1:len(file_name)]
 
 
 def file_change1():
     global abf
     global filename1
     filename1 = askopenfilename()
-    eval("f'{}'".format(filename1))
+    if filename1 == '':
+        filename1 = "No File Chosen"
     gui()
 
 
@@ -192,6 +196,8 @@ def file_change2():
     global abf
     global filename2
     filename2 = askopenfilename()
+    if filename2 == '':
+        filename2 = "No File Chosen"
     gui()
 
 
@@ -199,6 +205,8 @@ def file_change3():
     global abf
     global filename3
     filename3 = askopenfilename()
+    if filename3 == '':
+        filename3 = "No File Chosen"
     gui()
 
 
@@ -206,6 +214,8 @@ def file_change4():
     global abf
     global filename4
     filename4 = askopenfilename()
+    if filename4 == '':
+        filename4 = "No File Chosen"
     gui()
 
 
@@ -213,6 +223,8 @@ def file_change5():
     global abf
     global filename5
     filename5 = askopenfilename()
+    if filename5 == '':
+        filename5 = "No File Chosen"
     gui()
 
 
@@ -220,6 +232,8 @@ def file_change6():
     global abf
     global filename6
     filename6 = askopenfilename()
+    if filename6 == '':
+        filename6 = "No File Chosen"
     gui()
 
 
@@ -227,6 +241,8 @@ def file_change7():
     global abf
     global filename7
     filename7 = askopenfilename()
+    if filename7 == '':
+        filename7 = "No File Chosen"
     gui()
 
 
