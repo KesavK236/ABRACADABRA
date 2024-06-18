@@ -9,11 +9,6 @@ from scipy.signal import savgol_filter
 from tkinter.filedialog import askopenfilename
 from neuroconv.datainterfaces import AbfInterface
 
-
-# compiling line
-# pyinstaller -F --icon="ABF Analyzer Icon.ico" --noconsole ABRACADABRA.py
-
-
 def gui():
     global output_file_entry
     global spinbox_dvdt
@@ -139,11 +134,9 @@ def gui():
     label7.grid(row=7, column=4, sticky='W')
     button_file_change7.grid(row=7, column=3)
     button_file_clear7.grid(row=7, column=1)
-    # label_spacer.grid(row=8, column=0)
     label_dvdt.grid(row=9, column=1, columnspan=2, sticky='E', pady=25)
     spinbox_dvdt.grid(row=9, column=3)
     check_conversion.grid(row=10, column=3)
-    # label_spacer.grid(row=11, column=0)
     label_output_name.grid(row=25, column=3)
     output_file_entry.grid(row=26, column=2, columnspan=3, padx=20)
     button_enter.grid(row=27, column=3, pady=5)   
@@ -535,7 +528,7 @@ def rheo_4x(file_name, f):
         ap_count = 0
         threshold_ram = 0
 
-        # Graphing
+        # Graphing to Debug
         # plt.clf()
         # ax1 = plt.subplot()
         # ax2 = ax1.twinx()
@@ -679,7 +672,7 @@ def ramp_4x(file_name, f):
         while sweep_c[current_end] > 0:
             current_end += 1
         current_end = current_end - 2
-        # Graphing
+        # Graphing to Debug
         # plt.clf()
         # ax1 = plt.subplot()
         # ax2 = ax1.twinx()
@@ -827,7 +820,7 @@ def short_rheo(file_name, f, step):
             dv_peak = sweep_y_d[k]
         k += 1
 
-    # rakesh threshold
+    # rakesh threshold method
     threshold_dvdt = dv_peak / 10
 
     halfwidth_start = 0
@@ -1145,9 +1138,9 @@ def callback():
         metadata['NWBFile'].update(
             identifier=str(uuid4()),
             session_description=session_description.get(),
-            lab=lab.get(),  # <-- optional
-            institution=institution.get(),  # <-- optional
-            experimenter=[experimenter.get()]  # <-- optional
+            lab=lab.get(),
+            institution=institution.get(),
+            experimenter=[experimenter.get()]
         )
         metadata["Subject"] = dict(
             subject_id=subject_id.get(),
