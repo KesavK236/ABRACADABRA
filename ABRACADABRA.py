@@ -4,8 +4,11 @@ import pyabf.filter
 import matplotlib.pyplot as plt
 import numpy as np
 import tkinter as tk
+from uuid import uuid4
 from scipy.signal import savgol_filter
 from tkinter.filedialog import askopenfilename
+from neuroconv.datainterfaces import AbfInterface
+
 
 # compiling line
 # pyinstaller -F --icon="ABF Analyzer Icon.ico" --noconsole ABRACADABRA.py
@@ -14,6 +17,13 @@ from tkinter.filedialog import askopenfilename
 def gui():
     global output_file_entry
     global spinbox_dvdt
+    global conversion_bool
+
+    if conversion_bool.get() == 1:
+        window.geometry('550x720')
+    else:
+        window.geometry('550x500')
+
     clear_frame()
     clear_button_w = 8
     button_enter = tk.Button(window, text="Enter", width=5, height=1, bg="grey", fg="black", command=callback)
@@ -69,6 +79,37 @@ def gui():
     label_output_name = tk.Label(window, text="Output File Name:", font=("Arial", 10))
     output_file_entry = tk.Entry(window, textvariable=output_file_name_variable, width=50)
 
+    # conversion GUI Widgets
+    check_conversion = tk.Checkbutton(window, text='Convert to NWB file', command=gui,variable=conversion_bool,
+	    onvalue=1, offvalue=0)
+    label_conversion = tk.Label(window, text="Conversion will take a few minutes", font=("Arial", 12))
+
+    label_cell_id = tk.Label(window, text="Cell ID:", font=("Ariel", 10))
+    text_cell_id = tk.Entry(window, textvariable=cell_id, width=8)
+    label_slice_id = tk.Label(window, text="Slice ID:", font=("Ariel", 10))
+    text_slice_id = tk.Entry(window, textvariable=slice_id, width=8)
+    label_target_layer = tk.Label(window, text="Targeted Layer:", font=("Ariel", 10))
+    text_target_layer = tk.Entry(window, textvariable=targeted_layer, width=8)
+    label_inferred_layer = tk.Label(window, text="Inferred Layer:", font=("Ariel", 10))
+    text_inferred_layer = tk.Entry(window, textvariable=inferred_layer, width=8)
+    label_session_description = tk.Label(window, text="Session Description", font=("Ariel", 10))
+    text_session_description = tk.Entry(window, textvariable=session_description, width=8)
+    label_lab = tk.Label(window, text="Lab Name:", font=("Ariel", 10))
+    text_lab = tk.Entry(window, textvariable=lab, width=8)
+    label_institution = tk.Label(window, text="Institution Name:", font=("Ariel", 10))
+    text_institution = tk.Entry(window, textvariable=institution, width=8)
+    label_experimenter = tk.Label(window, text="Experimenter Name:", font=("Ariel", 10))
+    text_experimenter = tk.Entry(window, textvariable=experimenter, width=8)
+    label_subject_id = tk.Label(window, text="Subject ID:", font=("Ariel", 10))
+    text_subject_id = tk.Entry(window, textvariable=subject_id, width=8)
+    label_species = tk.Label(window, text="Species:", font=("Ariel", 10))
+    text_species = tk.Entry(window, textvariable=species, width=8)
+    label_sex = tk.Label(window, text="Sex (M, F, U, O):", font=("Ariel", 10))
+    text_sex = tk.Entry(window, textvariable=sex, width=8)
+    label_date_of_birth = tk.Label(window, text="Date of Birth (YYYY-MM-DD):", font=("Ariel", 10))
+    text_date_of_birth = tk.Entry(window, textvariable=date_of_birth, width=8)
+
+    # placement of widgets on the window
     label_title.grid(row=0, column=3, columnspan=2, sticky='W', pady=5)
     label_spacer.grid(row=1, column=0, padx=5)
     label_rmp.grid(row=1, column=2, pady=5, sticky='E')
@@ -100,13 +141,43 @@ def gui():
     label7.grid(row=7, column=4, sticky='W')
     button_file_change7.grid(row=7, column=3)
     button_file_clear7.grid(row=7, column=1)
-    label_spacer.grid(row=8, column=0, pady=30)
-    label_dvdt.grid(row=9, column=1, columnspan=2, sticky='E', pady=40)
+    # label_spacer.grid(row=8, column=0)
+    label_dvdt.grid(row=9, column=1, columnspan=2, sticky='E', pady=25)
     spinbox_dvdt.grid(row=9, column=3)
-    label_spacer.grid(row=10, column=0, pady=10)
-    button_enter.grid(row=13, column=3, pady=5)
-    output_file_entry.grid(row=12, column=2, columnspan=3, sticky='W')
-    label_output_name.grid(row=11, column=3)
+    check_conversion.grid(row=10, column=3)
+    # label_spacer.grid(row=11, column=0)
+    label_output_name.grid(row=25, column=3)
+    output_file_entry.grid(row=26, column=2, columnspan=3, sticky='W')
+    button_enter.grid(row=27, column=3, pady=5)   
+
+    if conversion_bool.get() == 1:
+        label_cell_id.grid(row=12, column=1, columnspan=2, sticky='E')
+        text_cell_id.grid(row=12, column=3)
+        label_slice_id.grid(row=13, column=1, columnspan=2, sticky='E')
+        text_slice_id.grid(row=13, column=3)
+        label_target_layer.grid(row=14, column=1, columnspan=2, sticky='E')
+        text_target_layer.grid(row=14, column=3)
+        label_inferred_layer.grid(row=15, column=1, columnspan=2, sticky='E')
+        text_inferred_layer.grid(row=15, column=3)
+        label_session_description.grid(row=16, column=1, columnspan=2, sticky='E')
+        text_session_description.grid(row=16, column=3)
+        label_lab.grid(row=17, column=1, columnspan=2, sticky='E')
+        text_lab.grid(row=17, column=3)
+        label_institution.grid(row=18, column=1, columnspan=2, sticky='E')
+        text_institution.grid(row=18, column=3)
+        label_experimenter.grid(row=19, column=1, columnspan=2, sticky='E')
+        text_experimenter.grid(row=19, column=3)
+        label_subject_id.grid(row=20, column=1, columnspan=2, sticky='E')
+        text_subject_id.grid(row=20, column=3)
+        label_species.grid(row=21, column=1, columnspan=2, sticky='E')
+        text_species.grid(row=21, column=3)
+        label_sex.grid(row=22, column=1, columnspan=2, sticky='E')
+        text_sex.grid(row=22, column=3)
+        label_date_of_birth.grid(row=23, column=1, columnspan=2, sticky='E')
+        text_date_of_birth.grid(row=23, column=3)
+        label_conversion.grid(row=24, column=2, columnspan=3)
+    else:
+        label_spacer.grid(row=11, column=0, pady=25)
 
     window.mainloop()
 
@@ -122,6 +193,7 @@ def file_change1():
     global abf
     global filename1
     filename1 = askopenfilename()
+    eval("f'{}'".format(filename1))
     gui()
 
 
@@ -388,11 +460,12 @@ def rheo_1s(file_name, f):
             end_curr = sum_end_current / count_end_current
             end_volt = sum_end_voltage / count_end_voltage
 
-            # input resistance
+             # input resistance
             if hyper_pol_count < 1:
-                hyper_pol_input_res += (((end_volt - base_volt) * (10 ** -3)) / (end_curr * (10 ** -9)))
-                hyper_pol_count += 1
                 average_sag = v_min / end_volt
+
+            hyper_pol_input_res += (((end_volt - base_volt) * (10 ** -3)) / (end_curr * (10 ** -9)))
+            hyper_pol_count += 1
 
         if sweep_c[curr_start_index + 1] > 0 and ap_bool == 0:
             return_array = ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index)
@@ -414,13 +487,13 @@ def rheo_1s(file_name, f):
             image_made_bool = 1
 
     if hyper_pol_count > 0:
-        input_res = hyper_pol_input_res
+        input_res = hyper_pol_input_res / (10 ** 6)
         omega = chr(0x3a9)
         print("Average Input Resistance (M" + omega + "): " + str(input_res))
         f.write("Average Input Resistance (Mega Ohms), " + str(input_res))
         f.write('\n')
-        print("Average Voltage Sag: " + str(average_sag))
-        f.write("Average Voltage Sag, " + str(average_sag))
+        print("Voltage Sag: " + str(average_sag))
+        f.write("Voltage Sag, " + str(average_sag))
         f.write('\n')
 
     if ap_bool == 1:
@@ -671,8 +744,8 @@ def short_rheo(file_name, f, step):
     global spinbox_dvdt
     if file_name == "No File Chosen":
         return
-    print("Short_Rheo " + step + " Data:")
-    f.write("Short_Rheo " + step + " Data:")
+    print("Short_Rheo_" + step + " Data:")
+    f.write("Short_Rheo_" + step + " Data:")
     f.write('\n')
     abf = pyabf.ABF(file_name)
     sweep_number = -1
@@ -967,7 +1040,9 @@ def phase_plane(sweep_x, sweep_y, sweep_y_d, step):
 def callback():
     global phase_plane_bool_5ms
     global phase_plane_bool_1s
+    global output_file_path_pp_5ms
     global final_directory
+    global conversion_bool
     output_file_name = no_spaces(output_file_entry.get())
     output_folder_name = output_file_name + "_outputs"
     current_directory = os.getcwd()
@@ -983,7 +1058,6 @@ def callback():
         ramp_4x(filename5, f)
         short_rheo(filename6, f, "5ms")
         short_rheo(filename7, f, "1s")
-        print("Done")
     os.system("start EXCEL.EXE " + output_file_path)
     if phase_plane_bool_5ms == 1:
         os.system("start EXCEL.EXE " + output_file_path_pp_5ms)
@@ -991,6 +1065,104 @@ def callback():
     if phase_plane_bool_1s == 1:
         os.system("start EXCEL.EXE " + output_file_path_pp_1s)
         phase_plane_bool_1s = 0
+
+#     Conversion
+    # Metadata info
+    if conversion_bool.get() == 1:
+        recording_sessions = []
+        file_paths = []
+        if filename1 != "No File Chosen":
+            file_paths.append(filename1)
+            session = {
+                "abf_file_name": file_name_presentation(filename1),
+                "stimulus_type": "long_square",
+                "icephys_experiment_type": "current_clamp"
+            }
+            recording_sessions.append(session)
+        if filename2 != "No File Chosen":
+            file_paths.append(filename2)
+            session = {
+                "abf_file_name": file_name_presentation(filename2),
+                "stimulus_type": "long_square",
+                "icephys_experiment_type": "current_clamp"
+            }
+            recording_sessions.append(session)
+        if filename3 != "No File Chosen":
+            file_paths.append(filename3)
+            session = {
+                "abf_file_name": file_name_presentation(filename3),
+                "stimulus_type": "long_square",
+                "icephys_experiment_type": "current_clamp"
+            }
+            recording_sessions.append(session)
+        if filename4 != "No File Chosen":
+            file_paths.append(filename4)
+            session = {
+                "abf_file_name": file_name_presentation(filename4),
+                "stimulus_type": "long_square",
+                "icephys_experiment_type": "current_clamp"
+            }
+            recording_sessions.append(session)
+        if filename5 != "No File Chosen":
+            file_paths.append(filename5)
+            session = {
+                "abf_file_name": file_name_presentation(filename5),
+                "stimulus_type": "long_square",
+                "icephys_experiment_type": "current_clamp"
+            }
+            recording_sessions.append(session)
+        if filename6 != "No File Chosen":
+            file_paths.append(filename6)
+            session = {
+                "abf_file_name": file_name_presentation(filename6),
+                "stimulus_type": "long_square",
+                "icephys_experiment_type": "current_clamp"
+            }
+            recording_sessions.append(session)
+        if filename7 != "No File Chosen":
+            file_paths.append(filename7)
+            session = {
+                "abf_file_name": file_name_presentation(filename7),
+                "stimulus_type": "long_square",
+                "icephys_experiment_type": "current_clamp"
+            }
+            recording_sessions.append(session)
+
+        icephys_metadata = {
+            "cell_id": cell_id.get(),
+            "slice_id": slice_id.get(),
+            "targeted_layer": targeted_layer.get(),
+            "inferred_layer": inferred_layer.get(),
+            "recording_sessions": recording_sessions
+        }
+
+        # Instantiate data interface
+        interface = AbfInterface(
+            file_paths=file_paths,
+            icephys_metadata=icephys_metadata
+        )
+
+        # Get metadata from source data and modify any values you want
+        metadata = interface.get_metadata()
+        metadata['NWBFile'].update(
+            identifier=str(uuid4()),
+            session_description=session_description.get(),
+            lab=lab.get(),  # <-- optional
+            institution=institution.get(),  # <-- optional
+            experimenter=[experimenter.get()]  # <-- optional
+        )
+        metadata["Subject"] = dict(
+            subject_id=subject_id.get(),
+            species=species.get(),
+            sex=sex.get(),
+            date_of_birth=date_of_birth.get() + "T00:00:00"
+        )
+
+        # Run conversion
+        interface.run_conversion(nwbfile_path=final_directory + "/" + output_file_name + ".nwb", metadata=metadata)
+        print("converted to NWB")
+    print("Done")
+    return
 
 
 filename1 = "No File Chosen"
@@ -1000,22 +1172,35 @@ filename4 = "No File Chosen"
 filename5 = "No File Chosen"
 filename6 = "No File Chosen"
 filename7 = "No File Chosen"
-
 final_directory = ""
 output_file_path_pp_5ms = ""
 output_file_path_pp_1s = ""
 buttonClicked = False
 phase_plane_bool_5ms = 0
 phase_plane_bool_1s = 0
+
 window = tk.Tk()
 window.title("ABRACADABRA")
 window.geometry('550x500')
-final_directory = ""
 window.iconbitmap("ABF Analyzer Icon.ico")
-
+conversion_bool = tk.IntVar()
 spinval = tk.StringVar()
 spinval.set("5")
 spinbox_dvdt = tk.Spinbox(window, from_=1.0, to=100.0, textvariable=spinval, width=5)
+cell_id = tk.StringVar()
+slice_id = tk.StringVar()
+targeted_layer = tk.StringVar()
+inferred_layer = tk.StringVar()
+session_description = tk.StringVar()
+lab = tk.StringVar()
+institution = tk.StringVar()
+institution.set("Washington University in St. Louis")
+experimenter = tk.StringVar()
+subject_id = tk.StringVar()
+species = tk.StringVar()
+species.set("Homo sapiens")
+sex = tk.StringVar()
+date_of_birth = tk.StringVar()
 
 output_file_name_variable = tk.StringVar()
 output_file_entry = tk.Entry(window, textvariable=output_file_name_variable, width=40)
