@@ -12,6 +12,8 @@ def gui():
     global output_file_entry
     global spinbox_dvdt
     global conversion_bool
+    global bool_reset_window
+    global check_button_ram
 
     if conversion_bool.get() == 1:
         window.geometry('550x720')
@@ -169,7 +171,14 @@ def gui():
     else:
         label_spacer.grid(row=11, column=0, pady=25)
    
-    window.mainloop()
+    if check_button_ram != conversion_bool.get():
+        check_button_ram = conversion_bool.get()
+        bool_reset_window = True
+    if bool_reset_window == True:
+        bool_reset_window = False
+        return
+    else:
+        window.mainloop()
     
     
 
@@ -187,112 +196,140 @@ def file_name_presentation(file_name):
 def file_change1():
     global abf
     global filename1
+    global bool_reset_window
     filename1 = askopenfilename()
     if filename1 == '':
         filename1 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_change2():
     global abf
     global filename2
+    global bool_reset_window
     filename2 = askopenfilename()
     if filename2 == '':
         filename2 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_change3():
     global abf
     global filename3
+    global bool_reset_window
     filename3 = askopenfilename()
     if filename3 == '':
         filename3 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_change4():
     global abf
     global filename4
+    global bool_reset_window
     filename4 = askopenfilename()
     if filename4 == '':
         filename4 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_change5():
     global abf
     global filename5
+    global bool_reset_window
     filename5 = askopenfilename()
     if filename5 == '':
         filename5 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_change6():
     global abf
     global filename6
+    global bool_reset_window
     filename6 = askopenfilename()
     if filename6 == '':
         filename6 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_change7():
     global abf
     global filename7
+    global bool_reset_window
     filename7 = askopenfilename()
     if filename7 == '':
         filename7 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_clear1():
     global abf
     global filename1
+    global bool_reset_window
     filename1 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_clear2():
     global abf
     global filename2
+    global bool_reset_window
     filename2 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_clear3():
     global abf
     global filename3
+    global bool_reset_window
     filename3 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_clear4():
     global abf
     global filename4
+    global bool_reset_window
     filename4 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_clear5():
     global abf
     global filename5
+    global bool_reset_window
     filename5 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_clear6():
     global abf
     global filename6
+    global bool_reset_window
     filename6 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
 def file_clear7():
     global abf
     global filename7
+    global bool_reset_window
     filename7 = "No File Chosen"
+    bool_reset_window = True
     gui()
 
 
@@ -1213,6 +1250,8 @@ date_of_birth = tk.StringVar()
 
 output_file_name_variable = tk.StringVar()
 output_file_entry = tk.Entry(window, textvariable=output_file_name_variable, width=40)
-bool_reset_window = 0
+bool_reset_window = False
+check_button_ram = 0
 
-gui()
+while True:
+    gui()
