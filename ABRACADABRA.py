@@ -1,6 +1,5 @@
 import os
 import pyabf
-import pyabf.filter
 import matplotlib.pyplot as plt
 import numpy as np
 import tkinter as tk
@@ -169,8 +168,10 @@ def gui():
         label_conversion.grid(row=24, column=2, columnspan=3)
     else:
         label_spacer.grid(row=11, column=0, pady=25)
-
+   
     window.mainloop()
+    
+    
 
 
 def file_name_presentation(file_name):
@@ -189,7 +190,7 @@ def file_change1():
     filename1 = askopenfilename()
     if filename1 == '':
         filename1 = "No File Chosen"
-    return
+    gui()
 
 
 def file_change2():
@@ -198,7 +199,7 @@ def file_change2():
     filename2 = askopenfilename()
     if filename2 == '':
         filename2 = "No File Chosen"
-    return
+    gui()
 
 
 def file_change3():
@@ -207,7 +208,7 @@ def file_change3():
     filename3 = askopenfilename()
     if filename3 == '':
         filename3 = "No File Chosen"
-    return
+    gui()
 
 
 def file_change4():
@@ -216,7 +217,7 @@ def file_change4():
     filename4 = askopenfilename()
     if filename4 == '':
         filename4 = "No File Chosen"
-    return
+    gui()
 
 
 def file_change5():
@@ -225,7 +226,7 @@ def file_change5():
     filename5 = askopenfilename()
     if filename5 == '':
         filename5 = "No File Chosen"
-    return
+    gui()
 
 
 def file_change6():
@@ -234,7 +235,7 @@ def file_change6():
     filename6 = askopenfilename()
     if filename6 == '':
         filename6 = "No File Chosen"
-    return
+    gui()
 
 
 def file_change7():
@@ -243,56 +244,56 @@ def file_change7():
     filename7 = askopenfilename()
     if filename7 == '':
         filename7 = "No File Chosen"
-    return
+    gui()
 
 
 def file_clear1():
     global abf
     global filename1
     filename1 = "No File Chosen"
-    return
+    gui()
 
 
 def file_clear2():
     global abf
     global filename2
     filename2 = "No File Chosen"
-    return
+    gui()
 
 
 def file_clear3():
     global abf
     global filename3
     filename3 = "No File Chosen"
-    return
+    gui()
 
 
 def file_clear4():
     global abf
     global filename4
     filename4 = "No File Chosen"
-    return
+    gui()
 
 
 def file_clear5():
     global abf
     global filename5
     filename5 = "No File Chosen"
-    return
+    gui()
 
 
 def file_clear6():
     global abf
     global filename6
     filename6 = "No File Chosen"
-    return
+    gui()
 
 
 def file_clear7():
     global abf
     global filename7
     filename7 = "No File Chosen"
-    return
+    gui()
 
 
 def clear_frame():
@@ -1212,5 +1213,6 @@ date_of_birth = tk.StringVar()
 
 output_file_name_variable = tk.StringVar()
 output_file_entry = tk.Entry(window, textvariable=output_file_name_variable, width=40)
+bool_reset_window = 0
 
 gui()
