@@ -67,8 +67,8 @@ def gui():
     label_rheo4x = tk.Label(window, text="Rheo 4x", font=("Arial", 10))
     label_ramp1s = tk.Label(window, text="Ramp 1s", font=("Arial", 10))
     label_ramp4x = tk.Label(window, text="Ramp 4x", font=("Arial", 10))
-    label_shortrheo_5ms = tk.Label(window, text="Short Rheo 5ms", font=("Arial", 10))
-    label_shortrheo_1s = tk.Label(window, text="Short Rheo 1s", font=("Arial", 10))
+    label_shortrheo_5ms = tk.Label(window, text="Rheo 5ms Single AP", font=("Arial", 10))
+    label_shortrheo_1s = tk.Label(window, text="Rheo 1s Single AP", font=("Arial", 10))
     label_dvdt = tk.Label(window, text="Threshold dV/dt in mV/ms", font=("Arial", 10))
     label_title = tk.Label(window, text="ABRACADABRA", font=100)
     label_output_name = tk.Label(window, text="Output File Name:", font=("Arial", 10))
@@ -178,9 +178,7 @@ def gui():
         bool_reset_window = False
         return
     else:
-        window.mainloop()
-    
-    
+        window.mainloop() 
 
 
 def file_name_presentation(file_name):
@@ -438,6 +436,7 @@ def rmp(file_name, f):
     ax1.plot(sweep_x, sweep_y, alpha=.5)
     plt.grid()
     image_name = no_spaces(output_file_entry.get()) + "_rmp_graph.png"
+    plt.title(image_name[:-4])
     image_path = os.path.join(final_directory, image_name)
     plt.savefig(image_path)
 
@@ -528,12 +527,13 @@ def rheo_1s(file_name, f):
             ax1.set_xlabel(abf.sweepLabelX)
             ax1.plot(sweep_x, sweep_y, alpha=.5)
             image_name = no_spaces(output_file_entry.get()) + "_rheo_1s_graph.png"
+            plt.title(image_name[:-4])
             image_path = os.path.join(final_directory, image_name)
             plt.savefig(image_path)
             image_made_bool = 1
 
     if hyper_pol_count > 0:
-        input_res = hyper_pol_input_res / (10 ** 6)
+        input_res = hyper_pol_input_res / ((10 ** 6)* hyper_pol_count)
         omega = chr(0x3a9)
         print("Average Input Resistance (M" + omega + "): " + str(input_res))
         f.write("Average Input Resistance (Mega Ohms), " + str(input_res))
@@ -603,6 +603,7 @@ def rheo_4x(file_name, f):
         ax1.set_xlabel(abf.sweepLabelX)
         ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % i)
         image_name = no_spaces(output_file_entry.get()) + "_rheo_" + str(i+1) + "x_graph.png"
+        plt.title(image_name[:-4])
         image_path = os.path.join(final_directory, image_name)
         plt.savefig(image_path)
 
@@ -677,6 +678,7 @@ def ramp_1s(file_name, f):
             ax1.set_xlabel(abf.sweepLabelX)
             ax1.plot(sweep_x, sweep_y, alpha=.5)
             image_name = no_spaces(output_file_entry.get()) + "_ramp_1s_graph.png"
+            plt.title(image_name[:-4])    
             image_path = os.path.join(final_directory, image_name)
             plt.savefig(image_path)
             image_made_bool = 1
@@ -747,6 +749,7 @@ def ramp_4x(file_name, f):
         ax1.set_xlabel(abf.sweepLabelX)
         ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % i)
         image_name = no_spaces(output_file_entry.get()) + "_ramp_" + str(i+1) + "x_graph.png"
+        plt.title(image_name[:-4])
         image_path = os.path.join(final_directory, image_name)
         plt.savefig(image_path)
 
@@ -790,8 +793,8 @@ def short_rheo(file_name, f, step):
     global spinbox_dvdt
     if file_name == "No File Chosen":
         return
-    print("Short_Rheo_" + step + " Data:")
-    f.write("Short_Rheo_" + step + " Data:")
+    print("Rheo_" + step + " Data:")
+    f.write("Rheo_" + step + " Data:")
     f.write('\n')
     abf = pyabf.ABF(file_name)
     sweep_number = -1
@@ -906,8 +909,8 @@ def short_rheo(file_name, f, step):
     ax1.set_xlabel(abf.sweepLabelX)
     # ax2.set_ylabel(abf.sweepLabelC)
     ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % sweep_number)
-    plt.legend()
-    image_name = no_spaces(output_file_entry.get()) + "_short_rheo_" + step + "_graph.png"
+    image_name = no_spaces(output_file_entry.get()) + "_rheo_" + step + "_single_ap_graph.png"
+    plt.title(image_name[:-4])
     image_path = os.path.join(final_directory, image_name)
     plt.savefig(image_path)
     # # ax1.plot(xhat, yhat, alpha=.5, label=" sweep %d voltage" % sweep_number)
@@ -1079,6 +1082,7 @@ def phase_plane(sweep_x, sweep_y, sweep_y_d, step):
     # ax2.set_ylabel(abf.sweepLabelC)
     ax1.plot(sweep_y, sweep_y_d, alpha=.5)
     image_name = no_spaces(output_file_entry.get()) + "_" + step +"_phase_plane_plot.png"
+    plt.title(image_name[:-4])
     image_path = os.path.join(final_directory, image_name)
     plt.savefig(image_path)
 
@@ -1117,6 +1121,8 @@ def callback():
     if conversion_bool.get() == 1:
         recording_sessions = []
         file_paths = []
+        file_names = []
+        num_sessions = 0
         if filename1 != "No File Chosen":
             file_paths.append(filename1)
             session = {
@@ -1124,7 +1130,9 @@ def callback():
                 "stimulus_type": "long_square",
                 "icephys_experiment_type": "current_clamp"
             }
+            num_sessions += 1
             recording_sessions.append(session)
+            file_names.append(file_name_presentation(filename1)[:-4])
         if filename2 != "No File Chosen":
             file_paths.append(filename2)
             session = {
@@ -1132,6 +1140,8 @@ def callback():
                 "stimulus_type": "long_square",
                 "icephys_experiment_type": "current_clamp"
             }
+            num_sessions += 1
+            file_names.append(file_name_presentation(filename2)[:-4])
             recording_sessions.append(session)
         if filename3 != "No File Chosen":
             file_paths.append(filename3)
@@ -1140,6 +1150,8 @@ def callback():
                 "stimulus_type": "long_square",
                 "icephys_experiment_type": "current_clamp"
             }
+            num_sessions += 1
+            file_names.append(file_name_presentation(filename3)[:-4])
             recording_sessions.append(session)
         if filename4 != "No File Chosen":
             file_paths.append(filename4)
@@ -1148,6 +1160,8 @@ def callback():
                 "stimulus_type": "long_square",
                 "icephys_experiment_type": "current_clamp"
             }
+            num_sessions += 1
+            file_names.append(file_name_presentation(filename4)[:-4])
             recording_sessions.append(session)
         if filename5 != "No File Chosen":
             file_paths.append(filename5)
@@ -1156,6 +1170,8 @@ def callback():
                 "stimulus_type": "long_square",
                 "icephys_experiment_type": "current_clamp"
             }
+            num_sessions += 1
+            file_names.append(file_name_presentation(filename5)[:-4])
             recording_sessions.append(session)
         if filename6 != "No File Chosen":
             file_paths.append(filename6)
@@ -1164,6 +1180,8 @@ def callback():
                 "stimulus_type": "long_square",
                 "icephys_experiment_type": "current_clamp"
             }
+            num_sessions += 1
+            file_names.append(file_name_presentation(filename6)[:-4])
             recording_sessions.append(session)
         if filename7 != "No File Chosen":
             file_paths.append(filename7)
@@ -1172,41 +1190,44 @@ def callback():
                 "stimulus_type": "long_square",
                 "icephys_experiment_type": "current_clamp"
             }
+            num_sessions += 1
+            file_names.append(file_name_presentation(filename7)[:-4])
             recording_sessions.append(session)
 
-        icephys_metadata = {
-            "cell_id": cell_id.get(),
-            "slice_id": slice_id.get(),
-            "targeted_layer": targeted_layer.get(),
-            "inferred_layer": inferred_layer.get(),
-            "recording_sessions": recording_sessions
-        }
+        for i in range(num_sessions):
+            icephys_metadata = {
+                "cell_id": cell_id.get(),
+                "slice_id": slice_id.get(),
+                "targeted_layer": targeted_layer.get(),
+                "inferred_layer": inferred_layer.get(),
+                "recording_sessions": recording_sessions
+            }
 
-        # Instantiate data interface
-        interface = AbfInterface(
-            file_paths=file_paths,
-            icephys_metadata=icephys_metadata
-        )
+            # Instantiate data interface
+            interface = AbfInterface(
+                file_paths=file_paths,
+                icephys_metadata=icephys_metadata
+            )
 
-        # Get metadata from source data and modify any values you want
-        metadata = interface.get_metadata()
-        metadata['NWBFile'].update(
-            identifier=str(uuid4()),
-            session_description=session_description.get(),
-            lab=lab.get(),
-            institution=institution.get(),
-            experimenter=[experimenter.get()]
-        )
-        metadata["Subject"] = dict(
-            subject_id=subject_id.get(),
-            species=species.get(),
-            sex=sex.get(),
-            date_of_birth=date_of_birth.get() + "T00:00:00"
-        )
+            # Get metadata from source data and modify any values you want
+            metadata = interface.get_metadata()
+            metadata['NWBFile'].update(
+                identifier=str(uuid4()),
+                session_description=session_description.get(),
+                lab=lab.get(),
+                institution=institution.get(),
+                experimenter=[experimenter.get()]
+            )
+            metadata["Subject"] = dict(
+                subject_id=subject_id.get(),
+                species=species.get(),
+                sex=sex.get(),
+                date_of_birth=date_of_birth.get() + "T00:00:00"
+            )
 
-        # Run conversion
-        interface.run_conversion(nwbfile_path=final_directory + "/" + output_file_name + ".nwb", metadata=metadata)
-        print("Converted ABFs to an NWB")
+            # Run conversion
+            interface.run_conversion(nwbfile_path=final_directory + "/" + file_names[i] + ".nwb", metadata=metadata)
+            print("Converted ABFs to an NWB")
     print("Analysis Complete")
     return
 
@@ -1228,7 +1249,7 @@ phase_plane_bool_1s = False
 window = tk.Tk()
 window.title("ABRACADABRA")
 window.geometry('550x500')
-window.iconbitmap("ABRACADABRA.ico")
+# window.iconbitmap(os.getcwd() + "\\ABRACADABRA.ico")
 conversion_bool = tk.IntVar()
 spinval = tk.StringVar()
 spinval.set("5")
