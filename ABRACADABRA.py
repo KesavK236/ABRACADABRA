@@ -8,12 +8,12 @@ import pandas as pd
 from uuid import uuid4
 from hampel import hampel
 from scipy.signal import savgol_filter
-from scipy.signal import butter
-from scipy.ndimage import gaussian_filter
+# from scipy.signal import butter
+# from scipy.ndimage import gaussian_filter
 from tkinter.filedialog import askopenfilename
 # from neuroconv.datainterfaces import AbfInterface
 
-# pyinstaller -F --icon="ABF Analyzer Icon.ico" --noconsole ABRACADABRA.py
+# pyinstaller -F --icon="ABRACADABRA.ico" --noconsole ABRACADABRA.py
 
 def gui():
     global output_file_entry
@@ -23,9 +23,9 @@ def gui():
     global check_button_ram
 
     if conversion_bool.get() == 1:
-        window.geometry('550x720')
+        window.geometry('600x720')
     else:
-        window.geometry('550x500')
+        window.geometry('600x500')
 
     clear_frame()
 
@@ -84,7 +84,7 @@ def gui():
     # conversion GUI Widgets
     check_conversion = tk.Checkbutton(window, text='Convert to NWB file', command=gui,variable=conversion_bool,
 	    onvalue=1, offvalue=0)
-    label_conversion = tk.Label(window, text="Conversion will take a few minutes", fg='red', font=("Arial", 12))
+    label_conversion = tk.Label(window, text="This Only Queues the Conversion", fg='red', font=("Arial", 12))
     label_cell_id = tk.Label(window, text="Cell ID:", font=("Ariel", 10))
     text_cell_id = tk.Entry(window, textvariable=cell_id, width=30)
     label_slice_id = tk.Label(window, text="Slice ID:", font=("Ariel", 10))
@@ -146,35 +146,35 @@ def gui():
     spinbox_dvdt.grid(row=9, column=3)
     check_conversion.grid(row=10, column=3)
     label_output_name.grid(row=25, column=3)
-    output_file_entry.grid(row=26, column=2, columnspan=3, padx=20)
+    output_file_entry.grid(row=26, column=2, columnspan=4, sticky='W', padx= 70)
     button_enter.grid(row=27, column=3, pady=5)   
 
     if conversion_bool.get() == 1:
-        label_cell_id.grid(row=12, column=1, columnspan=2, sticky='E')
-        text_cell_id.grid(row=12, column=3, columnspan=2, sticky='W')
-        label_slice_id.grid(row=13, column=1, columnspan=2, sticky='E')
-        text_slice_id.grid(row=13, column=3, columnspan=2, sticky='W')
-        label_target_layer.grid(row=14, column=1, columnspan=2, sticky='E')
-        text_target_layer.grid(row=14, column=3, columnspan=2, sticky='W')
-        label_inferred_layer.grid(row=15, column=1, columnspan=2, sticky='E')
-        text_inferred_layer.grid(row=15, column=3, columnspan=2, sticky='W')
-        label_session_description.grid(row=16, column=1, columnspan=2, sticky='E')
-        text_session_description.grid(row=16, column=3, columnspan=2, sticky='W')
-        label_lab.grid(row=17, column=1, columnspan=2, sticky='E')
-        text_lab.grid(row=17, column=3, columnspan=2, sticky='W')
-        label_institution.grid(row=18, column=1, columnspan=2, sticky='E')
-        text_institution.grid(row=18, column=3, columnspan=2, sticky='W')
-        label_experimenter.grid(row=19, column=1, columnspan=2, sticky='E')
-        text_experimenter.grid(row=19, column=3, columnspan=2, sticky='W')
-        label_subject_id.grid(row=20, column=1, columnspan=2, sticky='E')
-        text_subject_id.grid(row=20, column=3, columnspan=2, sticky='W')
-        label_species.grid(row=21, column=1, columnspan=2, sticky='E')
-        text_species.grid(row=21, column=3, columnspan=2, sticky='W')
-        label_sex.grid(row=22, column=1, columnspan=2, sticky='E')
-        text_sex.grid(row=22, column=3, columnspan=2, sticky='W')
-        label_date_of_birth.grid(row=23, column=1, columnspan=2, sticky='E')
-        text_date_of_birth.grid(row=23, column=3, columnspan=2, sticky='W')
-        label_conversion.grid(row=24, column=2, columnspan=3)
+        label_cell_id.grid(row=12, column=0, columnspan=3, sticky='E')
+        text_cell_id.grid(row=12, column=3, columnspan=4, sticky='W')
+        label_slice_id.grid(row=13, column=0, columnspan=3, sticky='E')
+        text_slice_id.grid(row=13, column=3, columnspan=4, sticky='W')
+        label_target_layer.grid(row=14, column=0, columnspan=3, sticky='E')
+        text_target_layer.grid(row=14, column=3, columnspan=4, sticky='W')
+        label_inferred_layer.grid(row=15, column=0, columnspan=3, sticky='E')
+        text_inferred_layer.grid(row=15, column=3, columnspan=4, sticky='W')
+        label_session_description.grid(row=16, column=0, columnspan=3, sticky='E')
+        text_session_description.grid(row=16, column=3, columnspan=4, sticky='W')
+        label_lab.grid(row=17, column=0, columnspan=3, sticky='E')
+        text_lab.grid(row=17, column=3, columnspan=4, sticky='W')
+        label_institution.grid(row=18, column=0, columnspan=3, sticky='E')
+        text_institution.grid(row=18, column=3, columnspan=4, sticky='W')
+        label_experimenter.grid(row=19, column=0, columnspan=3, sticky='E')
+        text_experimenter.grid(row=19, column=3, columnspan=4, sticky='W')
+        label_subject_id.grid(row=20, column=0, columnspan=3, sticky='E')
+        text_subject_id.grid(row=20, column=3, columnspan=4, sticky='W')
+        label_species.grid(row=21, column=0, columnspan=3, sticky='E')
+        text_species.grid(row=21, column=3, columnspan=4, sticky='W')
+        label_sex.grid(row=22, column=0, columnspan=3, sticky='E')
+        text_sex.grid(row=22, column=3, columnspan=4, sticky='W')
+        label_date_of_birth.grid(row=23, column=0, columnspan=3, sticky='E')
+        text_date_of_birth.grid(row=23, column=3, columnspan=4, sticky='W')
+        label_conversion.grid(row=24, column=2, columnspan=4, padx=30)
     else:
         label_spacer.grid(row=11, column=0, pady=25)
    
@@ -1546,7 +1546,10 @@ phase_plane_bool_1s = False
 window = tk.Tk()
 window.title("ABRACADABRA")
 window.geometry('550x500')
-# window.iconbitmap(os.getcwd() + "\\ABRACADABRA.ico")
+try:
+    window.iconbitmap(os.getcwd() + "\\ABRACADABRA.ico")
+except:
+    print("Icon not in correct directory, but not necessary")
 conversion_bool = tk.IntVar()
 spinval = tk.StringVar()
 spinval.set("5")
