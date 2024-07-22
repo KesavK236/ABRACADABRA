@@ -1,12 +1,19 @@
 import os
 import pyabf
+import shutil
 import matplotlib.pyplot as plt
 import numpy as np
 import tkinter as tk
+import pandas as pd
 from uuid import uuid4
+from hampel import hampel
 from scipy.signal import savgol_filter
+from scipy.signal import butter
+from scipy.ndimage import gaussian_filter
 from tkinter.filedialog import askopenfilename
-from neuroconv.datainterfaces import AbfInterface
+# from neuroconv.datainterfaces import AbfInterface
+
+# pyinstaller -F --icon="ABF Analyzer Icon.ico" --noconsole ABRACADABRA.py
 
 def gui():
     global output_file_entry
@@ -350,7 +357,7 @@ def num_sweeps():
     return num_sweep
 
 
-def current_infection_start(sweep_c):
+def current_injection_start(sweep_c):
     curr_start_index = 0
     while sweep_c[curr_start_index] == 0:
         curr_start_index += 1
@@ -419,7 +426,8 @@ def rmp(file_name, f):
     abf = pyabf.ABF(file_name)
     abf.setSweep(0)
     sweep_x = np.array(abf.sweepX)
-    sweep_y = savgol_filter(np.array(abf.sweepY), window_length=100, polyorder=2)
+    sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
+    # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
     sum_potentials = 0
     for i in range(len(sweep_x)):
         sum_potentials += sweep_y[i]
@@ -462,7 +470,8 @@ def rheo_1s(file_name, f):
     for i in range(num_sweep):
         abf.setSweep(i)
         sweep_x = np.array(abf.sweepX)
-        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=100, polyorder=2)
+        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
+        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
         sweep_c = np.array(abf.sweepC)
 
         # calculate derivative of sweep_y
@@ -470,7 +479,7 @@ def rheo_1s(file_name, f):
         sweep_x_d = sweep_x[1:len(sweep_x)]
 
         # get time of current injection
-        curr_start_index = current_infection_start(sweep_c)
+        curr_start_index = current_injection_start(sweep_c)
 
         # get time of current injection conclusion
         curr_end_index = curr_start_index + 1
@@ -512,7 +521,8 @@ def rheo_1s(file_name, f):
             hyper_pol_input_res += (((end_volt - base_volt) * (10 ** -3)) / (end_curr * (10 ** -9)))
             hyper_pol_count += 1
 
-        if sweep_c[curr_start_index + 1] > 0 and ap_bool == 0:
+        ap_max = max(sweep_y)
+        if sweep_c[curr_start_index + 1] > 0 and ap_bool == 0 and ap_max > 0:
             return_array = ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index)
             ap_bool = return_array[0]
             current_threshold = return_array[1]
@@ -569,13 +579,14 @@ def rheo_4x(file_name, f):
     for i in range(4):
         abf.setSweep(i)
         sweep_x = np.array(abf.sweepX)
-        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=100, polyorder=2)
+        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
+        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
         sweep_c = np.array(abf.sweepC)
 
         sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
         sweep_x_d = sweep_x[1:len(sweep_x)]
 
-        curr_start_index = current_infection_start(sweep_c)
+        curr_start_index = current_injection_start(sweep_c)
 
         j = curr_start_index + 30
         ap_found = 0
@@ -654,16 +665,18 @@ def ramp_1s(file_name, f):
     for i in range(num_sweep):
         abf.setSweep(i)
         sweep_x = np.array(abf.sweepX)
-        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=100, polyorder=2)
+        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
+        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
         sweep_c = np.array(abf.sweepC)
 
         sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
         sweep_x_d = sweep_x[1:len(sweep_x)]
 
         # get time of current injection
-        curr_start_index = current_infection_start(sweep_c)
+        curr_start_index = current_injection_start(sweep_c)
 
-        if sweep_c[curr_start_index + 1] > 0 and ap_bool == 0:
+        ap_max = max(sweep_y)
+        if sweep_c[curr_start_index + 1] > 0 and ap_bool == 0 and ap_max > 0:
             return_array = ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index)
             ap_bool = return_array[0]
             threshold_curr = return_array[1]
@@ -709,13 +722,14 @@ def ramp_4x(file_name, f):
     for i in range(4):
         abf.setSweep(i)
         sweep_x = np.array(abf.sweepX)
-        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=100, polyorder=2)
+        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
+        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
         sweep_c = np.array(abf.sweepC)
 
         sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
         sweep_x_d = sweep_x[1:len(sweep_x)]
 
-        curr_start_index = current_infection_start(sweep_c)
+        curr_start_index = current_injection_start(sweep_c)
 
         j = curr_start_index + 30
         ap_found = 0
@@ -788,119 +802,56 @@ def ramp_4x(file_name, f):
         f.write('\n')
 
 
-def short_rheo(file_name, f, step):
+def short_rheo_5ms(file_name, f):
     global abf
     global spinbox_dvdt
     if file_name == "No File Chosen":
         return
-    print("Rheo_" + step + " Data:")
-    f.write("Rheo_" + step + " Data:")
+    print("Rheo_5ms Data:")
+    f.write("Rheo_5ms Data:")
     f.write('\n')
     abf = pyabf.ABF(file_name)
+    total_sweeps = num_sweeps()
     sweep_number = -1
     ap_max = -1
-
-    while ap_max < 0:
+    dv_peak = 0
+    while ap_max < 0 or dv_peak < 30:
         sweep_number += 1
+        if sweep_number >= total_sweeps:
+            print("Conditions for AP were not met, consider changing the dvdt")
+            return
         abf.setSweep(sweep_number)
-        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=100, polyorder=2)
+        sweep_x = np.array(abf.sweepX)
+        sweep_y = np.array(abf.sweepY)
+        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
+        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
+        sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
+        sweep_c = np.array(abf.sweepC)
         ap_max = max(sweep_y)
+        k = 0
+        curr_start_index = current_injection_start(sweep_c)
+        curr_end_index = len(sweep_c) - 100
+
+        current_window_dvdt = sweep_y_d[curr_start_index + 100:curr_end_index]
+
+        dv_peak = max(current_window_dvdt)
+        
     print("sweep number = " + str(sweep_number))
 
     sweep_x = np.array(abf.sweepX)
-    sweep_y = savgol_filter(np.array(abf.sweepY), window_length=100, polyorder=2)
+    sweep_y = np.array(abf.sweepY)
+    sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
     sweep_y_raw = np.array(abf.sweepY)
     sweep_c = np.array(abf.sweepC)
 
     sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
-    sweep_x_d = sweep_x[1:len(sweep_x)]
-    sweep_y_1 = sweep_y[1:len(sweep_y)]
+    sweep_y_d = hampel(sweep_y_d, window_size=3, n_sigma=3.0).filtered_data
+    sweep_x_d = sweep_x[1:]
+    sweep_y_1 = sweep_y[1:]
 
-    phase_plane(sweep_x_d, sweep_y_1, sweep_y_d, step)
-    # ax1 = plt.subplot()
-    # ax1.set_ylabel(abf.sweepLabelY)
-    # ax1.set_xlabel(abf.sweepLabelX)
-    # ax1.plot(sweep_x, sweep_y, alpha=0.5)
+    phase_plane(sweep_x_d, sweep_y_1, sweep_y_d, "5ms")
 
-    curr_start_index = current_infection_start(sweep_c)
-    j = curr_start_index
-
-    count = 0
-    sum_voltage = 0
-    for j in range(200, 400, 1):
-        sum_voltage += sweep_y[j]
-        count += 1
-    base_volt = sum_voltage / count
-
-    bool_processing = 1
-    bool_threshold = 1
-    bool_rise_start = 0
-    bool_half_rise = 0
-    bool_rise_end = 0
-    bool_fall_start = 0
-    bool_half_fall = 0
-    bool_fall_10_end = 0
-    bool_fall_end = 0
-    bool_half_ahp_fall = 0
-    bool_half_ahp_rise = 0
-    holding_current = 0
-    threshold_volt = 0
-    curr_threshold = 0
-    k = 0
-    v_peak = 0
-    v_peak_index = 0
-    ahp = 0
-    ahp_index = 0
-    peak_time = 0
-    end_fall = 0
-    ahp_time = 0
-    threshold_dvdt = int(spinbox_dvdt.get())
-
-    while k < len(sweep_x):
-        if sweep_y[k] > v_peak:
-            v_peak = sweep_y[k]
-            v_peak_index = k
-            peak_time = sweep_x[k]
-        k += 1
-
-    k = v_peak_index
-    while k < len(sweep_x):
-        if sweep_y[k] < ahp:
-            ahp = sweep_y[k]
-            ahp_index = k
-            ahp_time = sweep_x[k]
-        k += 1
-
-    k = 0
-    dv_peak = 0
-    while k < len(sweep_y_d):
-        if sweep_y_d[k] > dv_peak:
-            dv_peak = sweep_y_d[k]
-        k += 1
-
-    # rakesh threshold method
-    threshold_dvdt = dv_peak / 10
-
-    halfwidth_start = 0
-    halfwidth_end = 0
-    ahp_halfwidth_start = 0
-    ahp_halfwidth_end = 0
-    threshold_time = 0
-
-    rise_time_start_10 = 0
-    rise_time_end_90 = 0
-    fall_time_start_10 = 0
-    fall_time_end_90 = 0
-    v_rising_delta = 0
-    rise_time_10_start_index = 0
-    rise_time_90_end_index = 0
-    v_falling_delta = 0
-    fall_time_10_start_index = 0
-    fall_time_90_end_index = 0
-    halfwidth_volt = 0
-    ahp_halfwidth_volt = 0
-
-    # Graphing
+    # Graphing single AP
     plt.clf()
     plt.grid()
     ax1 = plt.subplot()
@@ -909,104 +860,152 @@ def short_rheo(file_name, f, step):
     ax1.set_xlabel(abf.sweepLabelX)
     # ax2.set_ylabel(abf.sweepLabelC)
     ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % sweep_number)
-    image_name = no_spaces(output_file_entry.get()) + "_rheo_" + step + "_single_ap_graph.png"
+    image_name = no_spaces(output_file_entry.get()) + "_rheo_5ms_single_ap_graph.png"
     plt.title(image_name[:-4])
     image_path = os.path.join(final_directory, image_name)
     plt.savefig(image_path)
-    # # ax1.plot(xhat, yhat, alpha=.5, label=" sweep %d voltage" % sweep_number)
-    # ax2.plot(sweep_x, sweep_c, alpha=.5, label="sweep %d current" % sweep_number, color='green')
-    # ax1.plot(sweep_x[v_peak_index], sweep_y[v_peak_index], marker="o", markersize="10", markeredgecolor="green",
-    #          markerfacecolor="green")
-    # ax1.plot(sweep_x[ahp_index], sweep_y[ahp_index], marker="o", markersize="10", markeredgecolor="red",
-    #          markerfacecolor="red")
-    #
 
-    while j < len(sweep_x_d) - 15 and bool_processing:
-        if sweep_y_d[j] > threshold_dvdt and bool_threshold:
-            bool_threshold = 0
-            bool_rise_start = 1
-            threshold_volt = sweep_y[j]
-            curr_threshold = sweep_c[curr_start_index + 1]
-            holding_current = sweep_c[curr_start_index - 5]
-            threshold_time = sweep_x[j]
+    # get time of current injection initiation
+    curr_start_index = current_injection_start(sweep_c)
+    threshold_curr = sweep_c[curr_start_index + 5]
 
-            v_rising_delta = v_peak - threshold_volt
-            rise_time_10_start_index = 0.1 * v_rising_delta + threshold_volt
-            rise_time_90_end_index = 0.9 * v_rising_delta + threshold_volt
-            v_falling_delta = threshold_volt - v_peak
-            fall_time_10_start_index = 0.1 * v_falling_delta + v_peak
-            fall_time_90_end_index = 0.9 * v_falling_delta + v_peak
-            halfwidth_volt = (threshold_volt + v_peak) / 2
-            ahp_halfwidth_volt = (threshold_volt + ahp) / 2
 
-        if sweep_y[j] >= rise_time_10_start_index and bool_rise_start:
-            bool_rise_start = 0
-            bool_half_rise = 1
-            rise_time_start_10 = sweep_x[j]
+    # get holding current
+    count = 0
+    sum_curr = 0
+    for j in range(curr_start_index - 101, curr_start_index - 1):
+        sum_curr += sweep_c[j]
+        count += 1
+    holding_curr = sum_curr / count
 
-        elif sweep_y[j] >= halfwidth_volt and bool_half_rise and not bool_rise_start:
-            bool_half_rise = 0
-            bool_rise_end = 1
-            halfwidth_start = sweep_x[j]
 
-        elif sweep_y[j] >= rise_time_90_end_index and bool_rise_end and not bool_half_rise:
-            bool_rise_end = 0
-            bool_fall_start = 1
-            rise_time_end_90 = sweep_x[j]
+    # get time of current injection conclusion
+    curr_end_index = len(sweep_c) - 100
 
-        elif j > v_peak_index and sweep_y[j] <= fall_time_10_start_index and bool_fall_start and not bool_rise_end:
-            bool_fall_start = 0
-            bool_half_fall = 1
-            fall_time_start_10 = sweep_x[j]
 
-        elif sweep_y[j] <= halfwidth_volt and bool_half_fall and not bool_fall_start:
-            bool_half_fall = 0
-            bool_fall_10_end = 1
-            halfwidth_end = sweep_x[j]
+    # Get steady state current at the end of the trace
+    count = 0
+    sum_voltage = 0
+    for j in range(curr_end_index - 200, curr_end_index):
+        sum_voltage += sweep_y[j]
+        count += 1
+    steady_state_volt = sum_voltage / count
 
-        elif sweep_y[j] <= fall_time_90_end_index and bool_fall_10_end and not bool_half_fall:
-            bool_fall_10_end = 0
-            bool_fall_end = 1
-            fall_time_end_90 = sweep_x[j]
+    # Get peak volt, index and time
+    peak_volt = max(sweep_y)
+    peak_index = np.argmax(sweep_y)
+    peak_time = sweep_x[peak_index]
 
-        elif sweep_y[j] <= threshold_volt and bool_fall_end and not bool_fall_10_end:
-            bool_fall_end = 0
-            bool_half_ahp_fall = 1
-            end_fall = sweep_x[j]
+    dvdt_threshold = int(spinbox_dvdt.get())
 
-        elif sweep_y[j] <= ahp_halfwidth_volt and bool_half_ahp_fall and not bool_fall_end:
-            bool_half_ahp_fall = 0
-            bool_half_ahp_rise = 1
-            ahp_halfwidth_start = sweep_x[j]
+    # # # Get threshold by going backwards from voltage peak
+    # k = peak_index
+    # while sweep_y_d[k] < dvdt_threshold:
+    #     k -= 1
+    # while sweep_y_d[k] > dvdt_threshold:
+    #     k-= 1
+    # threshold_index = k
+    # threshold_volt = sweep_y[threshold_index]
+    # threshold_time = sweep_x[threshold_index]
+    
+    # get threshold thorugh convoluted method but technically more accurate to physiology
+    k = current_injection_start(sweep_c) + 30
+    sweep_y_d_2 = np.diff(sweep_y_d) / (1000 * np.diff(sweep_x_d))
+    time_at_k = sweep_x[k]
+    while sweep_y_d[k] < dvdt_threshold or sweep_y_d_2[k] < 0:
+        test_2d = sweep_y_d_2[k]
+        test_v = sweep_y_d[k]
+        k += 1
+    threshold_index = k
+    threshold_volt = sweep_y[threshold_index]
+    threshold_time = sweep_x[threshold_index]
 
-        elif j > ahp_index and sweep_y[j] >= ahp_halfwidth_volt and bool_half_ahp_rise and not bool_half_fall:
-            bool_half_ahp_rise = 0
-            bool_processing = 0
-            ahp_halfwidth_end = sweep_x[j]
+    
+    # Find the deltas for rising phase
+    halfwidth_volt = (peak_volt + threshold_volt) / 2
+    rise_delta = peak_volt - threshold_volt
+    rise_volt_10 = (rise_delta * .1) + threshold_volt
+    rise_volt_90 = (rise_delta * .9) + threshold_volt
+    fall_volt_10 = rise_volt_90
+    fall_volt_90 = rise_volt_10
+    
+    # find the time points of rising phase
+    k = threshold_index
+    while sweep_y[k] < rise_volt_10:
+        k += 1
+    rise_time_10 = sweep_x[k]
 
-        j += 1
+    while sweep_y[k] < halfwidth_volt:
+        k += 1
+    halfwidth_start = sweep_x[k]
 
-    # plt.show()
+    while sweep_y[k] < rise_volt_90:
+        k += 1
+    rise_time_90 = sweep_x[k]
+
+    # find time points of falling phase
+    k = peak_index
+    while sweep_y[k] > fall_volt_10:
+        k += 1
+    fall_time_10 = sweep_x[k]
+
+    while sweep_y[k] > halfwidth_volt:
+        k += 1
+    halfwidth_end = sweep_x[k]
+
+    while sweep_y[k] > fall_volt_90:
+        k += 1
+    fall_time_90 = sweep_x[k]
+
+    while sweep_y[k] > threshold_volt:
+        k += 1
+    end_fall = sweep_x[k]
+    end_fall_index = k
+    
+    # determine ahp points
+    l = k
+    # find the nearest steady state point
+    while sweep_y_d[l] < 0:
+        l += 1
+    while sweep_y[l] > steady_state_volt:
+        l += 1
+    ap_end_index = l
+
+    ahp = 0
+    ahp_index = 0
+    ahp_array = sweep_y[end_fall_index:ap_end_index]
+    ahp = min(ahp_array)
+    ahp_index = np.argmin(ahp_array)
+    
+    ahp_halfwidth_volt = (steady_state_volt + ahp) / 2
+
+    # find ahp time points
+    k = end_fall_index
+    while sweep_y[k] > ahp_halfwidth_volt:
+        k +=1
+    ahp_halfwidth_start = sweep_x[k]
+
+    k = ahp_index
+    while sweep_y[k] < ahp_halfwidth_volt:
+        k += 1
+    ahp_halfwidth_end = sweep_x[k]
 
     rise_time_raw = peak_time - threshold_time
-    rise_time_10_90 = rise_time_end_90 - rise_time_start_10
+    rise_time_10_90 = rise_time_90 - rise_time_10
     fall_time_raw = end_fall - peak_time
-    fall_time_10_90 = fall_time_end_90 - fall_time_start_10
+    fall_time_10_90 = fall_time_90 - fall_time_10
     halfwidth = halfwidth_end - halfwidth_start
-    ahp_halfwidth = ahp_halfwidth_start - end_fall
-    rheobase = curr_threshold - holding_current
+    ahp_halfwidth = ahp_halfwidth_start - ahp_halfwidth_end
+    rheobase = threshold_curr - holding_curr
 
-    print("Short Threshold Current (nA): " + str(curr_threshold))
-    f.write("Short Threshold Current (nA), " + str(curr_threshold))
+    print("Relative Rheobase (nA): " + str(rheobase))
+    f.write("Relative Rheobase (nA), " + str(rheobase))
     f.write('\n')
-    print("Short Rheobase (nA): " + str(rheobase))
-    f.write("Short Rheobase (nA), " + str(rheobase))
+    print("AP Peak (mV): " + str(peak_volt))
+    f.write("AP Peak (mV), " + str(peak_volt))
     f.write('\n')
-    print("AP Peak (mV): " + str(v_peak))
-    f.write("AP Peak (mV), " + str(v_peak))
-    f.write('\n')
-    print("AP Amplitude (mV): " + str(v_peak-threshold_volt))
-    f.write("AP Amplitude (mV), " + str(v_peak-threshold_volt))
+    print("AP Amplitude (mV): " + str(peak_volt-threshold_volt))
+    f.write("AP Amplitude (mV), " + str(peak_volt-threshold_volt))
     f.write('\n')
     print("AP Voltage Threshold (mV): " + str(threshold_volt))
     f.write("AP Voltage Threshold (mV), " + str(threshold_volt))
@@ -1031,11 +1030,265 @@ def short_rheo(file_name, f, step):
     print("AP Falling Time 10-90 (ms): " + str(fall_time_10_90))
     f.write("AP Falling Time 10-90 (ms), " + str(fall_time_10_90))
     f.write('\n')
-    print("AP Minimum (mV): " + str(ahp))
-    f.write("AP Minimum (mV), " + str(ahp))
+    print("AHP Minimum (mV): " + str(ahp))
+    f.write("AHP Minimum (mV), " + str(ahp))
     f.write('\n')
-    print("AHP (mV): " + str(ahp - threshold_volt))
-    f.write("AHP (mV), " + str(ahp - threshold_volt))
+    print("AHP Relative (mV): " + str(ahp - threshold_volt))
+    f.write("AHP Relative (mV), " + str(ahp - threshold_volt))
+    f.write('\n')
+    ahp_halfwidth = two_sig_figs(ahp_halfwidth)
+    print("AHP half-width (ms): " + str(ahp_halfwidth))
+    f.write("AHP half-width (ms), " + str(ahp_halfwidth))
+    f.write('\n')
+    print("Upstroke-Downstroke ratio: " + str(rise_time_10_90 / fall_time_10_90))
+    f.write("Upstroke-Downstroke ratio:, " + str(rise_time_10_90 / fall_time_10_90))
+    f.write('\n')
+
+def short_rheo_1s(file_name, f):
+    global abf
+    global spinbox_dvdt
+    if file_name == "No File Chosen":
+        return
+    print("Rheo_1s Data:")
+    f.write("Rheo_1s Data:")
+    f.write('\n')
+    abf = pyabf.ABF(file_name)
+    total_sweeps = num_sweeps()
+    sweep_number = -1
+    ap_max = -1
+    dv_peak = 0
+    while ap_max < 0 or dv_peak < 30:
+        sweep_number += 1
+        if sweep_number >= total_sweeps:
+            print("Conditions for AP were not met, consider changing the dvdt")
+            return
+        abf.setSweep(sweep_number)
+        sweep_x = np.array(abf.sweepX)
+        sweep_y = np.array(abf.sweepY)
+        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
+        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
+        sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
+        sweep_c = np.array(abf.sweepC)
+        ap_max = max(sweep_y)
+        k = 0
+        curr_start_index = current_injection_start(sweep_c)
+        curr_end_index = curr_start_index + 1
+        length = len(sweep_c)
+        while sweep_c[curr_end_index] != 0:
+            curr_end_index += 1
+        curr_end_index -= 1
+
+        current_window_dvdt = sweep_y_d[curr_start_index + 100:curr_end_index]
+
+        dv_peak = max(current_window_dvdt)
+        
+    print("sweep number = " + str(sweep_number))
+
+    sweep_x = np.array(abf.sweepX)
+    sweep_y = np.array(abf.sweepY)
+    sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
+    sweep_y_raw = np.array(abf.sweepY)
+    sweep_c = np.array(abf.sweepC)
+
+    sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
+    sweep_y_d = hampel(sweep_y_d, window_size=3, n_sigma=3.0).filtered_data
+    sweep_x_d = sweep_x[1:]
+    sweep_y_1 = sweep_y[1:]
+
+    phase_plane(sweep_x_d, sweep_y_1, sweep_y_d, "1s")
+
+    # Graphing single AP
+    plt.clf()
+    plt.grid()
+    ax1 = plt.subplot()
+    # ax2 = ax1.twinx()
+    ax1.set_ylabel(abf.sweepLabelY)
+    ax1.set_xlabel(abf.sweepLabelX)
+    # ax2.set_ylabel(abf.sweepLabelC)
+    ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % sweep_number)
+    image_name = no_spaces(output_file_entry.get()) + "_rheo_1s_single_ap_graph.png"
+    plt.title(image_name[:-4])
+    image_path = os.path.join(final_directory, image_name)
+    plt.savefig(image_path)
+
+    # get time of current injection initiation
+    curr_start_index = current_injection_start(sweep_c)
+    threshold_curr = sweep_c[curr_start_index + 5]
+
+
+    # get holding current
+    count = 0
+    sum_curr = 0
+    for j in range(curr_start_index - 101, curr_start_index - 1):
+        sum_curr += sweep_c[j]
+        count += 1
+    holding_curr = sum_curr / count
+
+
+    # get time of current injection conclusion
+    curr_end_index = curr_start_index + 1
+    length = len(sweep_c)
+    while sweep_c[curr_end_index] != 0:
+        curr_end_index += 1
+        if curr_end_index >= len(sweep_c):
+            break
+    curr_end_index -= 1
+
+
+    # Get steady state current at the end of the trace
+    count = 0
+    sum_voltage = 0
+    for j in range(curr_end_index - 200, curr_end_index):
+        sum_voltage += sweep_y[j]
+        count += 1
+    steady_state_volt = sum_voltage / count
+
+    # Get peak volt, index and time
+    peak_volt = max(sweep_y)
+    peak_index = np.argmax(sweep_y)
+    peak_time = sweep_x[peak_index]
+
+    dvdt_threshold = int(spinbox_dvdt.get())
+
+    # # Get threshold by going backwards from voltage peak
+    # k = peak_index
+    # while sweep_y_d[k] < dvdt_threshold:
+    #     k -= 1
+    # while sweep_y_d[k] > dvdt_threshold:
+    #     k-= 1
+    # threshold_index = k
+    # threshold_volt = sweep_y[threshold_index]
+    # threshold_time = sweep_x[threshold_index]
+    
+    # get threshold thorugh convoluted method but technically more accurate to physiology
+    k = current_injection_start(sweep_c) + 30
+    sweep_y_d_2 = np.diff(sweep_y_d) / (1000 * np.diff(sweep_x_d))
+    time_at_k = sweep_x[k]
+    while sweep_y_d[k] < dvdt_threshold or sweep_y_d_2[k] < 15:
+        test_2d = sweep_y_d_2[k]
+        test_v = sweep_y_d[k]
+        k += 1
+    threshold_index = k
+    threshold_volt = sweep_y[threshold_index]
+    threshold_time = sweep_x[threshold_index]
+
+    
+    # Find the deltas for rising phase
+    halfwidth_volt = (peak_volt + threshold_volt) / 2
+    rise_delta = peak_volt - threshold_volt
+    rise_volt_10 = (rise_delta * .1) + threshold_volt
+    rise_volt_90 = (rise_delta * .9) + threshold_volt
+    fall_delta = steady_state_volt - peak_volt
+    fall_volt_10 = (fall_delta * .1) + peak_volt
+    fall_volt_90 = (fall_delta * .9) + peak_volt
+    
+    # find the time points of rising phase
+    k = threshold_index
+    while sweep_y[k] < rise_volt_10:
+        k += 1
+    rise_time_10 = sweep_x[k]
+
+    while sweep_y[k] < halfwidth_volt:
+        k += 1
+    halfwidth_start = sweep_x[k]
+
+    while sweep_y[k] < rise_volt_90:
+        k += 1
+    rise_time_90 = sweep_x[k]
+
+    # find time points of falling phase
+    k = peak_index
+    while sweep_y[k] > fall_volt_10:
+        k += 1
+    fall_time_10 = sweep_x[k]
+
+    while sweep_y[k] > halfwidth_volt:
+        k += 1
+    halfwidth_end = sweep_x[k]
+
+    while sweep_y[k] > fall_volt_90:
+        k += 1
+    fall_time_90 = sweep_x[k]
+
+    while sweep_y[k] > steady_state_volt:
+        k += 1
+    end_fall = sweep_x[k]
+    end_fall_index = k
+    
+    # determine ahp points
+    l = k
+    # find the nearest steady state point
+    while sweep_y_d[l] < 0: 
+        l += 1
+    
+    while sweep_y[l] > steady_state_volt:
+        l += 1
+    ap_end_index = l
+
+    ahp = 0
+    ahp_index = 0
+    ahp_array = sweep_y[end_fall_index:ap_end_index]
+    ahp = min(ahp_array)
+    ahp_index = np.argmin(ahp_array)
+    
+    ahp_halfwidth_volt = (steady_state_volt + ahp) / 2
+
+    # find ahp time points
+    k = end_fall_index
+    while sweep_y[k] > ahp_halfwidth_volt:
+        k +=1
+    ahp_halfwidth_start = sweep_x[k]
+
+    k = ahp_index
+    while sweep_y[k] < ahp_halfwidth_volt:
+        k += 1
+    ahp_halfwidth_end = sweep_x[k]
+
+    rise_time_raw = peak_time - threshold_time
+    rise_time_10_90 = rise_time_90 - rise_time_10
+    fall_time_raw = end_fall - peak_time
+    fall_time_10_90 = fall_time_90 - fall_time_10
+    halfwidth = halfwidth_end - halfwidth_start
+    ahp_halfwidth = ahp_halfwidth_start - ahp_halfwidth_end
+    rheobase = threshold_curr - holding_curr
+
+    print("Relative Rheobase (nA): " + str(rheobase))
+    f.write("Relative Rheobase (nA), " + str(rheobase))
+    f.write('\n')
+    print("AP Peak (mV): " + str(peak_volt))
+    f.write("AP Peak (mV), " + str(peak_volt))
+    f.write('\n')
+    print("AP Amplitude (mV): " + str(peak_volt-threshold_volt))
+    f.write("AP Amplitude (mV), " + str(peak_volt-threshold_volt))
+    f.write('\n')
+    print("AP Voltage Threshold (mV): " + str(threshold_volt))
+    f.write("AP Voltage Threshold (mV), " + str(threshold_volt))
+    f.write('\n')
+    rise_time_raw = two_sig_figs(rise_time_raw)
+    rise_time_10_90 = two_sig_figs(rise_time_10_90)
+    print("AP Rise Time Raw (ms): " + str(rise_time_raw))
+    f.write("AP Rise Time Raw (ms), " + str(rise_time_raw))
+    f.write('\n')
+    print("AP Rise Time 10-90 (ms): " + str(rise_time_10_90))
+    f.write("AP Rise Time 10-90 (ms), " + str(rise_time_10_90))
+    f.write('\n')
+    halfwidth = two_sig_figs(halfwidth)
+    print("AP Halfwidth (ms): " + str(halfwidth))
+    f.write("AP Halfwidth (ms), " + str(halfwidth))
+    f.write('\n')
+    fall_time_raw = two_sig_figs(fall_time_raw)
+    fall_time_10_90 = two_sig_figs(fall_time_10_90)
+    print("AP Falling Time Raw (ms): " + str(fall_time_raw))
+    f.write("AP Falling Time Raw (ms), " + str(fall_time_raw))
+    f.write('\n')
+    print("AP Falling Time 10-90 (ms): " + str(fall_time_10_90))
+    f.write("AP Falling Time 10-90 (ms), " + str(fall_time_10_90))
+    f.write('\n')
+    print("AHP Minimum (mV): " + str(ahp))
+    f.write("AHP Minimum (mV), " + str(ahp))
+    f.write('\n')
+    print("AHP Relative (mV): " + str(ahp - threshold_volt))
+    f.write("AHP Relative (mV), " + str(ahp - threshold_volt))
     f.write('\n')
     ahp_halfwidth = two_sig_figs(ahp_halfwidth)
     print("AHP half-width (ms): " + str(ahp_halfwidth))
@@ -1106,8 +1359,8 @@ def callback():
         rheo_4x(filename3, f)
         ramp_1s(filename4, f)
         ramp_4x(filename5, f)
-        short_rheo(filename6, f, "5ms")
-        short_rheo(filename7, f, "1s")
+        short_rheo_5ms(filename6, f)
+        short_rheo_1s(filename7, f)
     os.system("start EXCEL.EXE " + output_file_path)
     if phase_plane_bool_5ms == True:
         os.system("start EXCEL.EXE " + output_file_path_pp_5ms)
@@ -1116,118 +1369,162 @@ def callback():
         os.system("start EXCEL.EXE " + output_file_path_pp_1s)
         phase_plane_bool_1s = False
 
-#     Conversion
+#   #     Conversion
     # Metadata info
     if conversion_bool.get() == 1:
-        recording_sessions = []
-        file_paths = []
-        file_names = []
-        num_sessions = 0
+        df = pd.read_excel('bulk_abf_nwb_converter.xlsx')
+        input_folder = current_directory + "\\inputs"
         if filename1 != "No File Chosen":
-            file_paths.append(filename1)
-            session = {
-                "abf_file_name": file_name_presentation(filename1),
-                "stimulus_type": "long_square",
-                "icephys_experiment_type": "current_clamp"
-            }
-            num_sessions += 1
-            recording_sessions.append(session)
-            file_names.append(file_name_presentation(filename1)[:-4])
+            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename1)],
+                    'Cell Id' : [cell_id.get()],
+                    'Slice ID' : [slice_id.get()],
+                    'Targeted Layer' : [targeted_layer.get()],
+                    'Inferred Layer' : [inferred_layer.get()],
+                    'Stimulus Type' : ["long_square"],
+                    'Clamp Type' : ["current_clamp"],
+                    'Session Description' : [session_description.get()],
+                    'Lab Name' : [lab.get()],
+                    'Institution Name' : [institution.get()],
+                    'Experimenter Name' : [experimenter.get()],
+                    'Subject ID' : [subject_id.get()],
+                    'Species' : [species.get()],
+                    'Sex' : [sex.get()],
+                    'Date of Birth' : [date_of_birth.get()]
+                    })
+            df = pd.concat([df, df2], axis=0)
+            shutil.copy(filename1, input_folder)
         if filename2 != "No File Chosen":
-            file_paths.append(filename2)
-            session = {
-                "abf_file_name": file_name_presentation(filename2),
-                "stimulus_type": "long_square",
-                "icephys_experiment_type": "current_clamp"
-            }
-            num_sessions += 1
-            file_names.append(file_name_presentation(filename2)[:-4])
-            recording_sessions.append(session)
+            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename2)],
+                    'Cell Id' : [cell_id.get()],
+                    'Slice ID' : [slice_id.get()],
+                    'Targeted Layer' : [targeted_layer.get()],
+                    'Inferred Layer' : [inferred_layer.get()],
+                    'Stimulus Type' : ["long_square"],
+                    'Clamp Type' : ["current_clamp"],
+                    'Session Description' : [session_description.get()],
+                    'Lab Name' : [lab.get()],
+                    'Institution Name' : [institution.get()],
+                    'Experimenter Name' : [experimenter.get()],
+                    'Subject ID' : [subject_id.get()],
+                    'Species' : [species.get()],
+                    'Sex' : [sex.get()],
+                    'Date of Birth' : [date_of_birth.get()]
+                    })
+            df = pd.concat([df, df2], axis=0)
+            shutil.copy(filename2, input_folder)
         if filename3 != "No File Chosen":
-            file_paths.append(filename3)
-            session = {
-                "abf_file_name": file_name_presentation(filename3),
-                "stimulus_type": "long_square",
-                "icephys_experiment_type": "current_clamp"
-            }
-            num_sessions += 1
-            file_names.append(file_name_presentation(filename3)[:-4])
-            recording_sessions.append(session)
+            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename3)],
+                    'Cell Id' : [cell_id.get()],
+                    'Slice ID' : [slice_id.get()],
+                    'Targeted Layer' : [targeted_layer.get()],
+                    'Inferred Layer' : [inferred_layer.get()],
+                    'Stimulus Type' : ["long_square"],
+                    'Clamp Type' : ["current_clamp"],
+                    'Session Description' : [session_description.get()],
+                    'Lab Name' : [lab.get()],
+                    'Institution Name' : [institution.get()],
+                    'Experimenter Name' : [experimenter.get()],
+                    'Subject ID' : [subject_id.get()],
+                    'Species' : [species.get()],
+                    'Sex' : [sex.get()],
+                    'Date of Birth' : [date_of_birth.get()]
+                    })
+            df = pd.concat([df, df2], axis=0)
+            shutil.copy(filename3, input_folder)
         if filename4 != "No File Chosen":
-            file_paths.append(filename4)
-            session = {
-                "abf_file_name": file_name_presentation(filename4),
-                "stimulus_type": "long_square",
-                "icephys_experiment_type": "current_clamp"
-            }
-            num_sessions += 1
-            file_names.append(file_name_presentation(filename4)[:-4])
-            recording_sessions.append(session)
+            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename4)],
+                    'Cell Id' : [cell_id.get()],
+                    'Slice ID' : [slice_id.get()],
+                    'Targeted Layer' : [targeted_layer.get()],
+                    'Inferred Layer' : [inferred_layer.get()],
+                    'Stimulus Type' : ["long_square"],
+                    'Clamp Type' : ["current_clamp"],
+                    'Session Description' : [session_description.get()],
+                    'Lab Name' : [lab.get()],
+                    'Institution Name' : [institution.get()],
+                    'Experimenter Name' : [experimenter.get()],
+                    'Subject ID' : [subject_id.get()],
+                    'Species' : [species.get()],
+                    'Sex' : [sex.get()],
+                    'Date of Birth' : [date_of_birth.get()]
+                    })
+            df = pd.concat([df, df2], axis=0)
+            shutil.copy(filename4, input_folder)
         if filename5 != "No File Chosen":
-            file_paths.append(filename5)
-            session = {
-                "abf_file_name": file_name_presentation(filename5),
-                "stimulus_type": "long_square",
-                "icephys_experiment_type": "current_clamp"
-            }
-            num_sessions += 1
-            file_names.append(file_name_presentation(filename5)[:-4])
-            recording_sessions.append(session)
+            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename5)],
+                    'Cell Id' : [cell_id.get()],
+                    'Slice ID' : [slice_id.get()],
+                    'Targeted Layer' : [targeted_layer.get()],
+                    'Inferred Layer' : [inferred_layer.get()],
+                    'Stimulus Type' : ["long_square"],
+                    'Clamp Type' : ["current_clamp"],
+                    'Session Description' : [session_description.get()],
+                    'Lab Name' : [lab.get()],
+                    'Institution Name' : [institution.get()],
+                    'Experimenter Name' : [experimenter.get()],
+                    'Subject ID' : [subject_id.get()],
+                    'Species' : [species.get()],
+                    'Sex' : [sex.get()],
+                    'Date of Birth' : [date_of_birth.get()]
+                    })
+            df = pd.concat([df, df2], axis=0)
+            shutil.copy(filename5, input_folder)
         if filename6 != "No File Chosen":
-            file_paths.append(filename6)
-            session = {
-                "abf_file_name": file_name_presentation(filename6),
-                "stimulus_type": "long_square",
-                "icephys_experiment_type": "current_clamp"
-            }
-            num_sessions += 1
-            file_names.append(file_name_presentation(filename6)[:-4])
-            recording_sessions.append(session)
+            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename6)],
+                    'Cell Id' : [cell_id.get()],
+                    'Slice ID' : [slice_id.get()],
+                    'Targeted Layer' : [targeted_layer.get()],
+                    'Inferred Layer' : [inferred_layer.get()],
+                    'Stimulus Type' : ["long_square"],
+                    'Clamp Type' : ["current_clamp"],
+                    'Session Description' : [session_description.get()],
+                    'Lab Name' : [lab.get()],
+                    'Institution Name' : [institution.get()],
+                    'Experimenter Name' : [experimenter.get()],
+                    'Subject ID' : [subject_id.get()],
+                    'Species' : [species.get()],
+                    'Sex' : [sex.get()],
+                    'Date of Birth' : [date_of_birth.get()]
+                    })
+            df = pd.concat([df, df2], axis=0)
+            shutil.copy(filename6, input_folder)
         if filename7 != "No File Chosen":
-            file_paths.append(filename7)
-            session = {
-                "abf_file_name": file_name_presentation(filename7),
-                "stimulus_type": "long_square",
-                "icephys_experiment_type": "current_clamp"
-            }
-            num_sessions += 1
-            file_names.append(file_name_presentation(filename7)[:-4])
-            recording_sessions.append(session)
-
-        for i in range(num_sessions):
-            icephys_metadata = {
-                "cell_id": cell_id.get(),
-                "slice_id": slice_id.get(),
-                "targeted_layer": targeted_layer.get(),
-                "inferred_layer": inferred_layer.get(),
-                "recording_sessions": recording_sessions
-            }
-
-            # Instantiate data interface
-            interface = AbfInterface(
-                file_paths=file_paths,
-                icephys_metadata=icephys_metadata
-            )
-
-            # Get metadata from source data and modify any values you want
-            metadata = interface.get_metadata()
-            metadata['NWBFile'].update(
-                identifier=str(uuid4()),
-                session_description=session_description.get(),
-                lab=lab.get(),
-                institution=institution.get(),
-                experimenter=[experimenter.get()]
-            )
-            metadata["Subject"] = dict(
-                subject_id=subject_id.get(),
-                species=species.get(),
-                sex=sex.get(),
-                date_of_birth=date_of_birth.get() + "T00:00:00"
-            )
-
-            # Run conversion
-            interface.run_conversion(nwbfile_path=final_directory + "/" + file_names[i] + ".nwb", metadata=metadata)
-            print("Converted ABFs to an NWB")
+            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename7)],
+                    'Cell Id' : [cell_id.get()],
+                    'Slice ID' : [slice_id.get()],
+                    'Targeted Layer' : [targeted_layer.get()],
+                    'Inferred Layer' : [inferred_layer.get()],
+                    'Stimulus Type' : ["long_square"],
+                    'Clamp Type' : ["current_clamp"],
+                    'Session Description' : [session_description.get()],
+                    'Lab Name' : [lab.get()],
+                    'Institution Name' : [institution.get()],
+                    'Experimenter Name' : [experimenter.get()],
+                    'Subject ID' : [subject_id.get()],
+                    'Species' : [species.get()],
+                    'Sex' : [sex.get()],
+                    'Date of Birth' : [date_of_birth.get()]
+                    })
+            df = pd.concat([df, df2], axis=0)
+            shutil.copy(filename7, input_folder)
+        df.to_excel("bulk_abf_nwb_converter.xlsx", index=False)
+        # for j in range(og_len, i):
+        #     df.iloc[j, 1] = cell_id.get()
+        #     df.iloc[j, 2] = slice_id.get()
+        #     df.iloc[j, 3] = targeted_layer.get()
+        #     df.iloc[j, 4] = inferred_layer.get()
+        #     df.iloc[i, 5] = "long_square"
+        #     df.iloc[i, 6] = "current_clamp"
+        #     df.iloc[j, 7] = session_description.get()
+        #     df.iloc[j, 8] = lab.get()
+        #     df.iloc[j, 9] = institution.get()
+        #     df.iloc[j, 10] = experimenter.get()
+        #     df.iloc[j, 11] = subject_id.get()
+        #     df.iloc[j, 12] = species.get()
+        #     df.iloc[j, 13] = sex.get()
+        #     df.iloc[j, 14] = date_of_birth.get()
+    print("Analysis Complete")
+    return
     print("Analysis Complete")
     return
 
