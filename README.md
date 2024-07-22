@@ -47,7 +47,7 @@ Kesav Kothapalli
 
 ## Version History
 
-* Beta 0.2
+* Beta 0.9
     * Beta Release
 
 ## Acknowledgments
