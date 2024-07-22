@@ -10,7 +10,7 @@ An application that uses a python script to automate data extraction of electrop
 ### Installing
 
 * Download the ABRACADABRA from the box folder
-* It should contain 4 files: 221031_jy_2_0000.abf, ABF Analyzer Icon.ico, ABRACADABRA.exe, and README.md.
+* It should contain 3 files: ABF Analyzer Icon.ico, ABRACADABRA.exe, and README.md.
 * note this will only work on a windows system.
 
 ### Executing program
@@ -29,6 +29,13 @@ An application that uses a python script to automate data extraction of electrop
 * You can then click the "enter" button to run the program
 * The extracted data will populate in the in an excel file that will automatically open. You can also find all outputed files and images in a newly made folder made in the same folder with the ABRACADABRA application
 * You can either close the program or change the files to analyze your next data set
+
+### Converting ABF files to NWB files
+* You can begin the conversion to NWB files by clicking the "Convert to NWB file" checkbox
+* A set of text entries will appear for you to fill in the appropriate information for the NWB metadata
+* If a format example is in the label, please match that format to ensure proper conversion.
+* After running the analysis, the "bulk_abf_nwb_converter.xlsx" file will be populated with the inputed meta data
+* The actual conversion will be done by a seperate script overnight due to conversion times and compilation issues.
 
 ## Help
 
