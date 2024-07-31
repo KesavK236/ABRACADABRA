@@ -5,16 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tkinter as tk
 import pandas as pd
-from uuid import uuid4
 from hampel import hampel
 from scipy.signal import savgol_filter
-# from scipy.signal import butter
-# from scipy.ndimage import gaussian_filter
 from tkinter.filedialog import askopenfilename
+# from uuid import uuid4
 # from neuroconv.datainterfaces import AbfInterface
 
 # pyinstaller -F --icon="ABRACADABRA.ico" --noconsole ABRACADABRA.py
-
 def gui():
     global output_file_entry
     global spinbox_dvdt
@@ -427,14 +424,13 @@ def rmp(file_name, f):
     abf.setSweep(0)
     sweep_x = np.array(abf.sweepX)
     sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
-    # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
     sum_potentials = 0
     for i in range(len(sweep_x)):
         sum_potentials += sweep_y[i]
     resting_potential = sum_potentials / len(sweep_x)
 
     print("Resting Membrane Potential (mV): " + str(resting_potential))
-    f.write("Resting Membrane Potential (mV), " + str(resting_potential))
+    f.write("Resting Membrane Potential (mV):, " + str(resting_potential))
     f.write('\n')
 
     plt.clf()
@@ -471,7 +467,6 @@ def rheo_1s(file_name, f):
         abf.setSweep(i)
         sweep_x = np.array(abf.sweepX)
         sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
-        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
         sweep_c = np.array(abf.sweepC)
 
         # calculate derivative of sweep_y
@@ -546,22 +541,22 @@ def rheo_1s(file_name, f):
         input_res = hyper_pol_input_res / ((10 ** 6)* hyper_pol_count)
         omega = chr(0x3a9)
         print("Average Input Resistance (M" + omega + "): " + str(input_res))
-        f.write("Average Input Resistance (Mega Ohms), " + str(input_res))
+        f.write("Average Input Resistance (Mega Ohms):, " + str(input_res))
         f.write('\n')
         print("Voltage Sag: " + str(average_sag))
-        f.write("Voltage Sag, " + str(average_sag))
+        f.write("Voltage Sag:, " + str(average_sag))
         f.write('\n')
 
     if ap_bool == 1:
-        print("Current at Threshold (nA): " + str(current_threshold))
-        f.write("Current at Threshold (nA), " + str(current_threshold))
-        f.write('\n')
+        # print("Current at Threshold (nA): " + str(current_threshold))
+        # f.write("Current at Threshold (nA):, " + str(current_threshold))
+        # f.write('\n')
         print("Rheobase (nA): " + str(rheobase))
-        f.write("Rheobase (nA), " + str(rheobase))
+        f.write("Rheobase (nA):, " + str(rheobase))
         f.write('\n')
         ap_delay = two_sig_figs(ap_delay)
         print("Time to Spike (ms): " + str(ap_delay))
-        f.write("Time to Spike (ms), " + str(ap_delay))
+        f.write("Time to Spike (ms):, " + str(ap_delay))
         f.write('\n')
 
 
@@ -580,7 +575,6 @@ def rheo_4x(file_name, f):
         abf.setSweep(i)
         sweep_x = np.array(abf.sweepX)
         sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
-        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
         sweep_c = np.array(abf.sweepC)
 
         sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
@@ -642,7 +636,7 @@ def rheo_4x(file_name, f):
             j += 1
         # plt.show()
         print("Number of Action Potentials in Rheo " + str(i + 1) + "x rheobase:" + str(ap_count))
-        f.write("Number of Action Potentials in Rheo " + str(i + 1) + "x rheobase, " + str(ap_count))
+        f.write("Number of Action Potentials in Rheo " + str(i + 1) + "x rheobase:, " + str(ap_count))
         f.write('\n')
 
 
@@ -666,7 +660,6 @@ def ramp_1s(file_name, f):
         abf.setSweep(i)
         sweep_x = np.array(abf.sweepX)
         sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
-        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
         sweep_c = np.array(abf.sweepC)
 
         sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
@@ -696,15 +689,15 @@ def ramp_1s(file_name, f):
             plt.savefig(image_path)
             image_made_bool = 1
     if ap_bool == 1:
-        print("Current at Threshold (nA): " + str(threshold_curr))
-        f.write("Current at Threshold (nA), " + str(threshold_curr))
-        f.write('\n')
-        print("Delta Current (nA): " + str(curr_delta))
-        f.write("Delta Current(nA), " + str(curr_delta))
+        # print("Current at Threshold (nA): " + str(threshold_curr))
+        # f.write("Current at Threshold (nA):, " + str(threshold_curr))
+        # f.write('\n')
+        print("Rheobase (nA): " + str(curr_delta))
+        f.write("Rheobase(nA):, " + str(curr_delta))
         f.write('\n')
         ap_delay = two_sig_figs(ap_delay)
         print("Time to Spike (ms): " + str(ap_delay))
-        f.write("Time to Spike (ms), " + str(ap_delay))
+        f.write("Time to Spike (ms):, " + str(ap_delay))
         f.write('\n')
 
 
@@ -723,12 +716,8 @@ def ramp_4x(file_name, f):
         abf.setSweep(i)
         sweep_x = np.array(abf.sweepX)
         sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
-        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
         sweep_c = np.array(abf.sweepC)
-
         sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
-        sweep_x_d = sweep_x[1:len(sweep_x)]
-
         curr_start_index = current_injection_start(sweep_c)
 
         j = curr_start_index + 30
@@ -736,7 +725,6 @@ def ramp_4x(file_name, f):
         finding_first = 0
         finding_peak = 0
         ap_count = 0
-        threshold_ram = 0
 
         # find current end
         current_end = j
@@ -767,38 +755,33 @@ def ramp_4x(file_name, f):
         image_path = os.path.join(final_directory, image_name)
         plt.savefig(image_path)
 
+        # AP Counting Block
         while j < current_end:
+            # Find Threshold point of the first ap
             if sweep_y_d[j] >= threshold_dvdt and ap_found == 0 and finding_peak == 0 and finding_first:
                 finding_first = 0
                 ap_found = 1
                 finding_peak = 1
-                threshold_ram = sweep_y[j]
-                # ax1.plot(sweep_x[j], sweep_y[j], marker="o", markersize="10", markeredgecolor="blue",
-                #          markerfacecolor="blue")
-            elif sweep_y_d[j] >= 0 and ap_found == 0 and finding_peak == 0 and finding_first == 0:
 
+            # Find the threshold point of subsequent APs
+            elif sweep_y_d[j] >= 0 and ap_found == 0 and finding_peak == 0 and finding_first == 0:
                 ap_found = 1
                 finding_peak = 1
-                threshold_ram = sweep_y[j]
-                # ax1.plot(sweep_x[j], sweep_y[j], marker="o", markersize="10", markeredgecolor="blue",
-                #          markerfacecolor="blue")
 
+            # Find the peak of current AP
             elif finding_peak == 1 and sweep_y_d[j] < 0 < sweep_y[j]:
                 if check_no_change(sweep_y_d, j, 1):
                     finding_peak = 0
-                    ap_count += 1
-                    # ax1.plot(sweep_x[j], sweep_y[j], marker="o", markersize="10", markeredgecolor="green",
-                    #          markerfacecolor="green")
+                    ap_count += 1      
 
+            # Find the end of the downstroke of current AP
             elif finding_peak == 0 and ap_found == 1 and sweep_y_d[j] > 0:
                 if check_no_change(sweep_y_d, j, 0):
                     ap_found = 0
-                    # ax1.plot(sweep_x[j], sweep_y[j], marker="o", markersize="10", markeredgecolor="red",
-                    #          markerfacecolor="red")
             j += 1
         # plt.show()
         print("Number of Action Potentials in Ramp " + str(i + 1) + "x threshold: " + str(ap_count))
-        f.write("Number of Action Potentials in Ramp " + str(i + 1) + "x threshold, " + str(ap_count))
+        f.write("Number of Action Potentials in Ramp " + str(i + 1) + "x threshold:, " + str(ap_count))
         f.write('\n')
 
 
@@ -815,7 +798,8 @@ def short_rheo_5ms(file_name, f):
     sweep_number = -1
     ap_max = -1
     dv_peak = 0
-    while ap_max < 0 or dv_peak < 30:
+    # Find the AP sweep
+    while ap_max < 0 or dv_peak < 20:
         sweep_number += 1
         if sweep_number >= total_sweeps:
             print("Conditions for AP were not met, consider changing the dvdt")
@@ -824,7 +808,6 @@ def short_rheo_5ms(file_name, f):
         sweep_x = np.array(abf.sweepX)
         sweep_y = np.array(abf.sweepY)
         sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
-        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
         sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
         sweep_c = np.array(abf.sweepC)
         ap_max = max(sweep_y)
@@ -845,7 +828,7 @@ def short_rheo_5ms(file_name, f):
     sweep_c = np.array(abf.sweepC)
 
     sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
-    sweep_y_d = hampel(sweep_y_d, window_size=3, n_sigma=3.0).filtered_data
+    
     sweep_x_d = sweep_x[1:]
     sweep_y_1 = sweep_y[1:]
 
@@ -865,10 +848,12 @@ def short_rheo_5ms(file_name, f):
     image_path = os.path.join(final_directory, image_name)
     plt.savefig(image_path)
 
+    # filter dvdt for calcuation purposes
+    sweep_y_d = hampel(sweep_y_d, window_size=3, n_sigma=3.0).filtered_data
+
     # get time of current injection initiation
     curr_start_index = current_injection_start(sweep_c)
     threshold_curr = sweep_c[curr_start_index + 5]
-
 
     # get holding current
     count = 0
@@ -999,46 +984,46 @@ def short_rheo_5ms(file_name, f):
     rheobase = threshold_curr - holding_curr
 
     print("Relative Rheobase (nA): " + str(rheobase))
-    f.write("Relative Rheobase (nA), " + str(rheobase))
+    f.write("Relative Rheobase (nA):, " + str(rheobase))
     f.write('\n')
     print("AP Peak (mV): " + str(peak_volt))
-    f.write("AP Peak (mV), " + str(peak_volt))
+    f.write("AP Peak (mV):, " + str(peak_volt))
     f.write('\n')
     print("AP Amplitude (mV): " + str(peak_volt-threshold_volt))
-    f.write("AP Amplitude (mV), " + str(peak_volt-threshold_volt))
+    f.write("AP Amplitude (mV):, " + str(peak_volt-threshold_volt))
     f.write('\n')
     print("AP Voltage Threshold (mV): " + str(threshold_volt))
-    f.write("AP Voltage Threshold (mV), " + str(threshold_volt))
+    f.write("AP Voltage Threshold (mV):, " + str(threshold_volt))
     f.write('\n')
     rise_time_raw = two_sig_figs(rise_time_raw)
     rise_time_10_90 = two_sig_figs(rise_time_10_90)
     print("AP Rise Time Raw (ms): " + str(rise_time_raw))
-    f.write("AP Rise Time Raw (ms), " + str(rise_time_raw))
+    f.write("AP Rise Time Raw (ms):, " + str(rise_time_raw))
     f.write('\n')
     print("AP Rise Time 10-90 (ms): " + str(rise_time_10_90))
-    f.write("AP Rise Time 10-90 (ms), " + str(rise_time_10_90))
+    f.write("AP Rise Time 10-90 (ms):, " + str(rise_time_10_90))
     f.write('\n')
     halfwidth = two_sig_figs(halfwidth)
     print("AP Halfwidth (ms): " + str(halfwidth))
-    f.write("AP Halfwidth (ms), " + str(halfwidth))
+    f.write("AP Halfwidth (ms):, " + str(halfwidth))
     f.write('\n')
     fall_time_raw = two_sig_figs(fall_time_raw)
     fall_time_10_90 = two_sig_figs(fall_time_10_90)
     print("AP Falling Time Raw (ms): " + str(fall_time_raw))
-    f.write("AP Falling Time Raw (ms), " + str(fall_time_raw))
+    f.write("AP Falling Time Raw (ms):, " + str(fall_time_raw))
     f.write('\n')
     print("AP Falling Time 10-90 (ms): " + str(fall_time_10_90))
-    f.write("AP Falling Time 10-90 (ms), " + str(fall_time_10_90))
+    f.write("AP Falling Time 10-90 (ms):, " + str(fall_time_10_90))
     f.write('\n')
     print("AHP Minimum (mV): " + str(ahp))
-    f.write("AHP Minimum (mV), " + str(ahp))
+    f.write("AHP Minimum (mV):, " + str(ahp))
     f.write('\n')
     print("AHP Relative (mV): " + str(ahp - threshold_volt))
-    f.write("AHP Relative (mV), " + str(ahp - threshold_volt))
+    f.write("AHP Relative (mV):, " + str(ahp - threshold_volt))
     f.write('\n')
     ahp_halfwidth = two_sig_figs(ahp_halfwidth)
     print("AHP half-width (ms): " + str(ahp_halfwidth))
-    f.write("AHP half-width (ms), " + str(ahp_halfwidth))
+    f.write("AHP half-width (ms):, " + str(ahp_halfwidth))
     f.write('\n')
     print("Upstroke-Downstroke ratio: " + str(rise_time_10_90 / fall_time_10_90))
     f.write("Upstroke-Downstroke ratio:, " + str(rise_time_10_90 / fall_time_10_90))
@@ -1057,7 +1042,7 @@ def short_rheo_1s(file_name, f):
     sweep_number = -1
     ap_max = -1
     dv_peak = 0
-    while ap_max < 0 or dv_peak < 30:
+    while ap_max < 0 or dv_peak < 20:
         sweep_number += 1
         if sweep_number >= total_sweeps:
             print("Conditions for AP were not met, consider changing the dvdt")
@@ -1066,7 +1051,6 @@ def short_rheo_1s(file_name, f):
         sweep_x = np.array(abf.sweepX)
         sweep_y = np.array(abf.sweepY)
         sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
-        # sweep_y = gaussian_filter(np.array(abf.sweepY), sigma=2)
         sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
         sweep_c = np.array(abf.sweepC)
         ap_max = max(sweep_y)
@@ -1091,7 +1075,6 @@ def short_rheo_1s(file_name, f):
     sweep_c = np.array(abf.sweepC)
 
     sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
-    sweep_y_d = hampel(sweep_y_d, window_size=3, n_sigma=3.0).filtered_data
     sweep_x_d = sweep_x[1:]
     sweep_y_1 = sweep_y[1:]
 
@@ -1110,6 +1093,9 @@ def short_rheo_1s(file_name, f):
     plt.title(image_name[:-4])
     image_path = os.path.join(final_directory, image_name)
     plt.savefig(image_path)
+
+    # filter the dvdt graph for easier calculations
+    sweep_y_d = hampel(sweep_y_d, window_size=3, n_sigma=3.0).filtered_data
 
     # get time of current injection initiation
     curr_start_index = current_injection_start(sweep_c)
@@ -1253,46 +1239,46 @@ def short_rheo_1s(file_name, f):
     rheobase = threshold_curr - holding_curr
 
     print("Relative Rheobase (nA): " + str(rheobase))
-    f.write("Relative Rheobase (nA), " + str(rheobase))
+    f.write("Relative Rheobase (nA):, " + str(rheobase))
     f.write('\n')
     print("AP Peak (mV): " + str(peak_volt))
-    f.write("AP Peak (mV), " + str(peak_volt))
+    f.write("AP Peak (mV):, " + str(peak_volt))
     f.write('\n')
     print("AP Amplitude (mV): " + str(peak_volt-threshold_volt))
-    f.write("AP Amplitude (mV), " + str(peak_volt-threshold_volt))
+    f.write("AP Amplitude (mV):, " + str(peak_volt-threshold_volt))
     f.write('\n')
     print("AP Voltage Threshold (mV): " + str(threshold_volt))
-    f.write("AP Voltage Threshold (mV), " + str(threshold_volt))
+    f.write("AP Voltage Threshold (mV):, " + str(threshold_volt))
     f.write('\n')
     rise_time_raw = two_sig_figs(rise_time_raw)
     rise_time_10_90 = two_sig_figs(rise_time_10_90)
     print("AP Rise Time Raw (ms): " + str(rise_time_raw))
-    f.write("AP Rise Time Raw (ms), " + str(rise_time_raw))
+    f.write("AP Rise Time Raw (ms):, " + str(rise_time_raw))
     f.write('\n')
     print("AP Rise Time 10-90 (ms): " + str(rise_time_10_90))
-    f.write("AP Rise Time 10-90 (ms), " + str(rise_time_10_90))
+    f.write("AP Rise Time 10-90 (ms):, " + str(rise_time_10_90))
     f.write('\n')
     halfwidth = two_sig_figs(halfwidth)
     print("AP Halfwidth (ms): " + str(halfwidth))
-    f.write("AP Halfwidth (ms), " + str(halfwidth))
+    f.write("AP Halfwidth (ms):, " + str(halfwidth))
     f.write('\n')
     fall_time_raw = two_sig_figs(fall_time_raw)
     fall_time_10_90 = two_sig_figs(fall_time_10_90)
     print("AP Falling Time Raw (ms): " + str(fall_time_raw))
-    f.write("AP Falling Time Raw (ms), " + str(fall_time_raw))
+    f.write("AP Falling Time Raw (ms):, " + str(fall_time_raw))
     f.write('\n')
     print("AP Falling Time 10-90 (ms): " + str(fall_time_10_90))
-    f.write("AP Falling Time 10-90 (ms), " + str(fall_time_10_90))
+    f.write("AP Falling Time 10-90 (ms):, " + str(fall_time_10_90))
     f.write('\n')
     print("AHP Minimum (mV): " + str(ahp))
-    f.write("AHP Minimum (mV), " + str(ahp))
+    f.write("AHP Minimum (mV):, " + str(ahp))
     f.write('\n')
     print("AHP Relative (mV): " + str(ahp - threshold_volt))
-    f.write("AHP Relative (mV), " + str(ahp - threshold_volt))
+    f.write("AHP Relative (mV):, " + str(ahp - threshold_volt))
     f.write('\n')
     ahp_halfwidth = two_sig_figs(ahp_halfwidth)
     print("AHP half-width (ms): " + str(ahp_halfwidth))
-    f.write("AHP half-width (ms), " + str(ahp_halfwidth))
+    f.write("AHP half-width (ms):, " + str(ahp_halfwidth))
     f.write('\n')
     print("Upstroke-Downstroke ratio: " + str(rise_time_10_90 / fall_time_10_90))
     f.write("Upstroke-Downstroke ratio:, " + str(rise_time_10_90 / fall_time_10_90))
@@ -1330,8 +1316,8 @@ def phase_plane(sweep_x, sweep_y, sweep_y_d, step):
     plt.grid()
     ax1 = plt.subplot()
     # ax2 = ax1.twinx()
-    ax1.set_ylabel("dV/dt")
-    ax1.set_xlabel("V")
+    ax1.set_ylabel("Derivative of Membrane Potential (mv/ms)")
+    ax1.set_xlabel("Membrane Potential (mV)")
     # ax2.set_ylabel(abf.sweepLabelC)
     ax1.plot(sweep_y, sweep_y_d, alpha=.5)
     image_name = no_spaces(output_file_entry.get()) + "_" + step +"_phase_plane_plot.png"
@@ -1369,7 +1355,7 @@ def callback():
         os.system("start EXCEL.EXE " + output_file_path_pp_1s)
         phase_plane_bool_1s = False
 
-#   #     Conversion
+#   Conversion
     # Metadata info
     if conversion_bool.get() == 1:
         df = pd.read_excel('bulk_abf_nwb_converter.xlsx')
@@ -1525,8 +1511,6 @@ def callback():
         #     df.iloc[j, 14] = date_of_birth.get()
     print("Analysis Complete")
     return
-    print("Analysis Complete")
-    return
 
 
 filename1 = "No File Chosen"
@@ -1545,7 +1529,7 @@ phase_plane_bool_1s = False
 
 window = tk.Tk()
 window.title("ABRACADABRA")
-window.geometry('550x500')
+window.geometry('600x500')
 try:
     window.iconbitmap(os.getcwd() + "\\ABRACADABRA.ico")
 except:
@@ -1568,7 +1552,6 @@ species = tk.StringVar()
 species.set("Homo sapiens")
 sex = tk.StringVar()
 date_of_birth = tk.StringVar()
-
 output_file_name_variable = tk.StringVar()
 output_file_entry = tk.Entry(window, textvariable=output_file_name_variable, width=40)
 bool_reset_window = False
