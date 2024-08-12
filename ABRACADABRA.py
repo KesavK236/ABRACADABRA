@@ -8,6 +8,7 @@ import pandas as pd
 from hampel import hampel
 from scipy.signal import savgol_filter
 from tkinter.filedialog import askopenfilename
+
 # from uuid import uuid4
 # from neuroconv.datainterfaces import AbfInterface
 
@@ -372,6 +373,7 @@ def ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start
     resting_current = sweep_c[j-10]
     ap_bool = 0
     threshold_dvdt = int(spinbox_dvdt.get())
+    # maybe need to add a extra check to ensure this is an action potential
     while j < len(sweep_c) - 1 and ap_bool == 0:
         if sweep_y_d[j] > threshold_dvdt:
             ap_bool = 1
@@ -588,19 +590,7 @@ def rheo_4x(file_name, f):
         ap_count = 0
         threshold_ram = 0
 
-        # Graphing to Debug
-        # plt.clf()
-        # ax1 = plt.subplot()
-        # ax2 = ax1.twinx()
-        # ax1.set_ylabel(abf.sweepLabelY)
-        # ax1.set_xlabel(abf.sweepLabelX)
-        # ax2.set_ylabel(abf.sweepLabelC)
-        #
-        # ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % i)
-        # # ax1.plot(xhat, yhat, alpha=.5, label=" sweep %d voltage" % i)
-        # ax2.plot(sweep_x, sweep_c, alpha=.5, label="sweep %d current" % i, color='green')
-        #
-        # plt.legend()
+        
         plt.clf()
         plt.grid()
         ax1 = plt.subplot()
