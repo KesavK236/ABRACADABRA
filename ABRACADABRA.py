@@ -5,9 +5,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import tkinter as tk
 import pandas as pd
+from PIL import ImageTk, Image
 from hampel import hampel
 from scipy.signal import savgol_filter
 from tkinter.filedialog import askopenfilename
+from tkinter import messagebox
 
 # from uuid import uuid4
 # from neuroconv.datainterfaces import AbfInterface
@@ -19,11 +21,12 @@ def gui():
     global conversion_bool
     global bool_reset_window
     global check_button_ram
+    global check_threshold
 
     if conversion_bool.get() == 1:
         window.geometry('600x720')
     else:
-        window.geometry('600x500')
+        window.geometry('600x475')
 
     clear_frame()
 
@@ -78,6 +81,8 @@ def gui():
     label_title = tk.Label(window, text="ABRACADABRA", font=100)
     label_output_name = tk.Label(window, text="Output File Name:", font=("Arial", 10))
     output_file_entry = tk.Entry(window, textvariable=output_file_name_variable, width=40, justify="center")
+    check_check = tk.Checkbutton(window, text='Verify Threshold Value?', command=gui,variable=check_threshold,
+	    onvalue=1, offvalue=0)
 
     # conversion GUI Widgets
     check_conversion = tk.Checkbutton(window, text='Convert to NWB file', command=gui,variable=conversion_bool,
@@ -140,9 +145,10 @@ def gui():
     label7.grid(row=7, column=4, sticky='W')
     button_file_change7.grid(row=7, column=3)
     button_file_clear7.grid(row=7, column=1)
-    label_dvdt.grid(row=9, column=1, columnspan=2, sticky='E', pady=25)
+    label_dvdt.grid(row=9, column=1, columnspan=2, sticky='E', pady=10)
     spinbox_dvdt.grid(row=9, column=3)
-    check_conversion.grid(row=10, column=3)
+    check_conversion.grid(row=11, column=3)
+    check_check.grid(row=10, column=3)
     label_output_name.grid(row=25, column=3)
     output_file_entry.grid(row=26, column=2, columnspan=4, sticky='W', padx= 70)
     button_enter.grid(row=27, column=3, pady=5)   
@@ -174,7 +180,7 @@ def gui():
         text_date_of_birth.grid(row=23, column=3, columnspan=4, sticky='W')
         label_conversion.grid(row=24, column=2, columnspan=4, padx=30)
     else:
-        label_spacer.grid(row=11, column=0, pady=25)
+        label_spacer.grid(row=12, column=0, pady=10)
    
     if check_button_ram != conversion_bool.get():
         check_button_ram = conversion_bool.get()
@@ -183,8 +189,13 @@ def gui():
         bool_reset_window = False
         return
     else:
-        window.mainloop() 
+        window.protocol("WM_DELETE_WINDOW", on_closing)
+        window.mainloop()
+        print("continuing")
 
+
+def on_closing():
+    window.destroy()
 
 def file_name_presentation(file_name):
     j = len(file_name) - 1
@@ -413,6 +424,90 @@ def no_spaces(name):
         if name[i] == ' ':
             name = name.replace(' ', '_')
     return name
+
+def threshold_window(sweep_x, sweep_y, threshold_time, threshold_volt, protocol):
+    global thresh_window
+    global keep_window_open
+    global window_check_bool 
+    global window_upper_limit_entry
+    global window_lower_limit_entry
+    keep_window_open = 1
+    thresh_window = tk.Tk()
+    thresh_window.title("Threshold Check")
+    thresh_window.geometry("600x200")   
+    current_directory = os.getcwd()
+    try:
+        thresh_window.iconbitmap(current_directory + "\\ABRACADABRA.ico")
+    except:
+        print("Icon not in correct directory, but not necessary")
+    plt.clf()
+    ax1 = plt.subplot()
+    ax1.set_ylabel(abf.sweepLabelY)
+    ax1.set_xlabel(abf.sweepLabelX)
+    ax1.plot(sweep_x, sweep_y, alpha=.5)
+    ax1.plot(threshold_time, threshold_volt, marker="o", markersize=2, markeredgecolor="green", markerfacecolor="green")
+    plt.grid()
+    image_name = protocol + " Short Rheo Trace with Estimated Threshold.jpg"
+    plt.title(image_name[:-4])
+
+    plt.show(block=False)
+
+    button_thresh_good = tk.Button(thresh_window, text="Threshold is good!", width=20, height=1, bg="grey", fg="black",
+                                    command=thresh_good_button)
+    button_thresh_window = tk.Button(thresh_window, text="Search in this window", width=20, height=1, bg="grey", fg="black",
+                                    command=window_button)
+    button_sweep_increase = tk.Button(thresh_window, text="Check next sweep", width=20, height=1, bg="grey", fg="black",
+                                    command=sweep_increase)
+    window_upper_limit_label = tk.Label(thresh_window, text="Upper Time Limit (sec):")
+    window_upper_limit_entry = tk.Entry(thresh_window, width=5)
+    window_lower_limit_label = tk.Label(thresh_window, text="Lower Time Limit (sec):")
+    window_lower_limit_entry = tk.Entry(thresh_window, width=5)
+    button_thresh_good.grid(column=0, row=4, padx=15, pady=15)
+    button_thresh_window.grid(column=1, row=4, padx=15, pady=15, columnspan=2)
+    button_sweep_increase.grid(column=3, row=4, padx=15, pady=15)
+    thresh_question_label = tk.Label(thresh_window, text="Does the chosen threshold look correct?")
+    thresh_question_label.grid(column=0, row=1, columnspan=3, pady=15)
+    window_upper_limit_label.grid(column=1, row=2, sticky="E")
+    window_upper_limit_entry.grid(column=2, row=2, sticky="W")    
+    window_lower_limit_label.grid(column=1, row=3, sticky="E")
+    window_lower_limit_entry.grid(column=2, row=3, sticky="W")
+    while keep_window_open:
+        thresh_window.update_idletasks()
+        thresh_window.update()
+    thresh_window.destroy()
+    plt.close()
+    return
+
+
+def thresh_good_button():
+    global window_check_bool
+    global keep_window_open
+    window_check_bool = 1
+    keep_window_open = 0
+
+def window_button():
+    global upper_window
+    global lower_window
+    global use_window
+    global window_upper_limit_entry
+    global window_lower_limit_entry
+    global window_check_bool
+    global keep_window_open
+    use_window = 1
+    upper_window = float(window_upper_limit_entry.get())
+    lower_window = float(window_lower_limit_entry.get())
+    keep_window_open = 0
+    window_check_bool = 0
+
+
+def sweep_increase():
+    global window_check_bool
+    global keep_window_open
+    global sweep_ram
+    window_check_bool = 0
+    keep_window_open = 0
+    sweep_ram += 1
+
 
 def rmp(file_name, f):
     global abf
@@ -778,6 +873,12 @@ def ramp_4x(file_name, f):
 def short_rheo_5ms(file_name, f):
     global abf
     global spinbox_dvdt
+    global window_check_bool
+    global lower_window
+    global upper_window
+    global use_window
+    global sweep_ram
+    global check_threshold
     if file_name == "No File Chosen":
         return
     print("Rheo_5ms Data:")
@@ -791,6 +892,7 @@ def short_rheo_5ms(file_name, f):
     # Find the AP sweep
     while ap_max < 0 or dv_peak < 20:
         sweep_number += 1
+        sweep_ram = sweep_number
         if sweep_number >= total_sweeps:
             print("Conditions for AP were not met, consider changing the dvdt")
             return
@@ -808,93 +910,99 @@ def short_rheo_5ms(file_name, f):
         current_window_dvdt = sweep_y_d[curr_start_index + 100:curr_end_index]
 
         dv_peak = max(current_window_dvdt)
+
+    window_check_bool = 0
+    while  window_check_bool == 0:  
+        sweep_number = sweep_ram
+        abf.setSweep(sweep_number)
+        print("sweep number = " + str(sweep_number))
+
+        sweep_x = np.array(abf.sweepX)
+        sweep_y = np.array(abf.sweepY)
+        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
+        sweep_y_raw = np.array(abf.sweepY)
+        sweep_c = np.array(abf.sweepC)
+
+        sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
         
-    print("sweep number = " + str(sweep_number))
+        sweep_x_d = sweep_x[1:]
+        sweep_y_1 = sweep_y[1:]
 
-    sweep_x = np.array(abf.sweepX)
-    sweep_y = np.array(abf.sweepY)
-    sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
-    sweep_y_raw = np.array(abf.sweepY)
-    sweep_c = np.array(abf.sweepC)
+        # filter dvdt for calcuation purposes
+        sweep_y_d_filtered = hampel(sweep_y_d, window_size=3, n_sigma=3.0).filtered_data
 
-    sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
+        # get time of current injection initiation
+        curr_start_index = current_injection_start(sweep_c)
+        threshold_curr = sweep_c[curr_start_index + 5]
+
+        # get holding current
+        count = 0
+        sum_curr = 0
+        for j in range(curr_start_index - 101, curr_start_index - 1):
+            sum_curr += sweep_c[j]
+            count += 1
+        holding_curr = sum_curr / count
+
+
+        # get time of current injection conclusion
+        curr_end_index = len(sweep_c) - 100
+
+
+        # Get steady state current at the end of the trace
+        count = 0
+        sum_voltage = 0
+        for j in range(curr_end_index - 200, curr_end_index):
+            sum_voltage += sweep_y[j]
+            count += 1
+        steady_state_volt = sum_voltage / count
+
+        # Get peak volt, index and time
+        peak_volt = max(sweep_y)
+        peak_index = np.argmax(sweep_y)
+        peak_time = sweep_x[peak_index]
+
+        dvdt_threshold = int(spinbox_dvdt.get())
+
+        # # # Get threshold by going backwards from voltage peak
+        # k = peak_index
+        # while sweep_y_d[k] < dvdt_threshold:
+        #     k -= 1
+        # while sweep_y_d[k] > dvdt_threshold:
+        #     k-= 1
+        # threshold_index = k
+        # threshold_volt = sweep_y[threshold_index]
+        # threshold_time = sweep_x[threshold_index]
+        
+        # get threshold thorugh convoluted method but technically more accurate to physiology
+        k = current_injection_start(sweep_c) + 30
+        sweep_y_d_2 = np.diff(sweep_y_d) / (1000 * np.diff(sweep_x_d))
+
+        if use_window == 1:
+            k = 0
+            while sweep_x[k] < lower_window:
+                k += 1
+            
+            while (sweep_y_d_filtered[k] < dvdt_threshold or sweep_y_d_2[k] < 0) and sweep_x[k] < upper_window:
+                k += 1
+                threshold_index = k
+                threshold_volt = sweep_y[threshold_index]
+                threshold_time = sweep_x[threshold_index]  
+                
+        else:
+            while sweep_y_d_filtered[k] < dvdt_threshold or sweep_y_d_2[k] < 0:
+                k += 1
+            threshold_index = k
+            threshold_volt = sweep_y[threshold_index]
+            threshold_time = sweep_x[threshold_index]
+
+        if check_threshold.get() == 1:
+            threshold_window(sweep_x, sweep_y, threshold_time, threshold_volt, "5ms")
+        
+        else:
+            window_check_bool = 1
     
-    sweep_x_d = sweep_x[1:]
-    sweep_y_1 = sweep_y[1:]
-
-    phase_plane(sweep_x_d, sweep_y_1, sweep_y_d, "5ms")
-
-    # Graphing single AP
-    plt.clf()
-    plt.grid()
-    ax1 = plt.subplot()
-    # ax2 = ax1.twinx()
-    ax1.set_ylabel(abf.sweepLabelY)
-    ax1.set_xlabel(abf.sweepLabelX)
-    # ax2.set_ylabel(abf.sweepLabelC)
-    ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % sweep_number)
-    image_name = no_spaces(output_file_entry.get()) + "_rheo_5ms_single_ap_graph.png"
-    plt.title(image_name[:-4])
-    image_path = os.path.join(final_directory, image_name)
-    plt.savefig(image_path)
-
-    # filter dvdt for calcuation purposes
-    sweep_y_d = hampel(sweep_y_d, window_size=3, n_sigma=3.0).filtered_data
-
-    # get time of current injection initiation
-    curr_start_index = current_injection_start(sweep_c)
-    threshold_curr = sweep_c[curr_start_index + 5]
-
-    # get holding current
-    count = 0
-    sum_curr = 0
-    for j in range(curr_start_index - 101, curr_start_index - 1):
-        sum_curr += sweep_c[j]
-        count += 1
-    holding_curr = sum_curr / count
-
-
-    # get time of current injection conclusion
-    curr_end_index = len(sweep_c) - 100
-
-
-    # Get steady state current at the end of the trace
-    count = 0
-    sum_voltage = 0
-    for j in range(curr_end_index - 200, curr_end_index):
-        sum_voltage += sweep_y[j]
-        count += 1
-    steady_state_volt = sum_voltage / count
-
-    # Get peak volt, index and time
-    peak_volt = max(sweep_y)
-    peak_index = np.argmax(sweep_y)
-    peak_time = sweep_x[peak_index]
-
-    dvdt_threshold = int(spinbox_dvdt.get())
-
-    # # # Get threshold by going backwards from voltage peak
-    # k = peak_index
-    # while sweep_y_d[k] < dvdt_threshold:
-    #     k -= 1
-    # while sweep_y_d[k] > dvdt_threshold:
-    #     k-= 1
-    # threshold_index = k
-    # threshold_volt = sweep_y[threshold_index]
-    # threshold_time = sweep_x[threshold_index]
-    
-    # get threshold thorugh convoluted method but technically more accurate to physiology
-    k = current_injection_start(sweep_c) + 30
-    sweep_y_d_2 = np.diff(sweep_y_d) / (1000 * np.diff(sweep_x_d))
-    time_at_k = sweep_x[k]
-    while sweep_y_d[k] < dvdt_threshold or sweep_y_d_2[k] < 0:
-        test_2d = sweep_y_d_2[k]
-        test_v = sweep_y_d[k]
-        k += 1
-    threshold_index = k
-    threshold_volt = sweep_y[threshold_index]
-    threshold_time = sweep_x[threshold_index]
-
+    window_check_bool = 0
+    use_window = 0
     
     # Find the deltas for rising phase
     halfwidth_volt = (peak_volt + threshold_volt) / 2
@@ -940,7 +1048,7 @@ def short_rheo_5ms(file_name, f):
     # determine ahp points
     l = k
     # find the nearest steady state point
-    while sweep_y_d[l] < 0:
+    while sweep_y_d_filtered[l] < 0:
         l += 1
     while sweep_y[l] > steady_state_volt:
         l += 1
@@ -1019,9 +1127,31 @@ def short_rheo_5ms(file_name, f):
     f.write("Upstroke-Downstroke ratio:, " + str(rise_time_10_90 / fall_time_10_90))
     f.write('\n')
 
+    phase_plane(sweep_x_d, sweep_y_1, sweep_y_d, "5ms")
+
+    # Graphing single AP
+    plt.clf()
+    plt.grid()
+    ax1 = plt.subplot()
+    # ax2 = ax1.twinx()
+    ax1.set_ylabel(abf.sweepLabelY)
+    ax1.set_xlabel(abf.sweepLabelX)
+    # ax2.set_ylabel(abf.sweepLabelC)
+    ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % sweep_number)
+    image_name = no_spaces(output_file_entry.get()) + "_rheo_5ms_single_ap_graph.png"
+    plt.title(image_name[:-4])
+    image_path = os.path.join(final_directory, image_name)
+    plt.savefig(image_path)
+
 def short_rheo_1s(file_name, f):
     global abf
     global spinbox_dvdt
+    global window_check_bool
+    global lower_window
+    global upper_window
+    global use_window
+    global sweep_ram
+    global check_threshold
     if file_name == "No File Chosen":
         return
     print("Rheo_1s Data:")
@@ -1055,99 +1185,104 @@ def short_rheo_1s(file_name, f):
         current_window_dvdt = sweep_y_d[curr_start_index + 100:curr_end_index]
 
         dv_peak = max(current_window_dvdt)
-        
+    sweep_ram = sweep_number    
     print("sweep number = " + str(sweep_number))
 
-    sweep_x = np.array(abf.sweepX)
-    sweep_y = np.array(abf.sweepY)
-    sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
-    sweep_y_raw = np.array(abf.sweepY)
-    sweep_c = np.array(abf.sweepC)
+    window_check_bool = 0
+    while window_check_bool == 0:
+        sweep_number = sweep_ram
+        print(sweep_number)
+        abf.setSweep(sweep_number)
+        sweep_x = np.array(abf.sweepX)
+        sweep_y = np.array(abf.sweepY)
+        sweep_y = savgol_filter(np.array(abf.sweepY), window_length=25, polyorder=3)
+        sweep_y_raw = np.array(abf.sweepY)
+        sweep_c = np.array(abf.sweepC)
 
-    sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
-    sweep_x_d = sweep_x[1:]
-    sweep_y_1 = sweep_y[1:]
+        sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
+        sweep_x_d = sweep_x[1:]
+        sweep_y_1 = sweep_y[1:]
 
-    phase_plane(sweep_x_d, sweep_y_1, sweep_y_d, "1s")
+        # filter the dvdt graph for easier calculations
+        sweep_y_d_filtered = hampel(sweep_y_d, window_size=3, n_sigma=3.0).filtered_data
 
-    # Graphing single AP
-    plt.clf()
-    plt.grid()
-    ax1 = plt.subplot()
-    # ax2 = ax1.twinx()
-    ax1.set_ylabel(abf.sweepLabelY)
-    ax1.set_xlabel(abf.sweepLabelX)
-    # ax2.set_ylabel(abf.sweepLabelC)
-    ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % sweep_number)
-    image_name = no_spaces(output_file_entry.get()) + "_rheo_1s_single_ap_graph.png"
-    plt.title(image_name[:-4])
-    image_path = os.path.join(final_directory, image_name)
-    plt.savefig(image_path)
-
-    # filter the dvdt graph for easier calculations
-    sweep_y_d = hampel(sweep_y_d, window_size=3, n_sigma=3.0).filtered_data
-
-    # get time of current injection initiation
-    curr_start_index = current_injection_start(sweep_c)
-    threshold_curr = sweep_c[curr_start_index + 5]
+        # get time of current injection initiation
+        curr_start_index = current_injection_start(sweep_c)
+        threshold_curr = sweep_c[curr_start_index + 5]
 
 
-    # get holding current
-    count = 0
-    sum_curr = 0
-    for j in range(curr_start_index - 101, curr_start_index - 1):
-        sum_curr += sweep_c[j]
-        count += 1
-    holding_curr = sum_curr / count
+        # get holding current
+        count = 0
+        sum_curr = 0
+        for j in range(curr_start_index - 101, curr_start_index - 1):
+            sum_curr += sweep_c[j]
+            count += 1
+        holding_curr = sum_curr / count
 
 
-    # get time of current injection conclusion
-    curr_end_index = curr_start_index + 1
-    length = len(sweep_c)
-    while sweep_c[curr_end_index] != 0:
-        curr_end_index += 1
-        if curr_end_index >= len(sweep_c):
-            break
-    curr_end_index -= 1
+        # get time of current injection conclusion
+        curr_end_index = curr_start_index + 1
+        length = len(sweep_c)
+        while sweep_c[curr_end_index] != 0:
+            curr_end_index += 1
+            if curr_end_index >= len(sweep_c):
+                break
+        curr_end_index -= 1
 
 
-    # Get steady state current at the end of the trace
-    count = 0
-    sum_voltage = 0
-    for j in range(curr_end_index - 200, curr_end_index):
-        sum_voltage += sweep_y[j]
-        count += 1
-    steady_state_volt = sum_voltage / count
+        # Get steady state current at the end of the trace
+        count = 0
+        sum_voltage = 0
+        for j in range(curr_end_index - 200, curr_end_index):
+            sum_voltage += sweep_y[j]
+            count += 1
+        steady_state_volt = sum_voltage / count
 
-    # Get peak volt, index and time
-    peak_volt = max(sweep_y)
-    peak_index = np.argmax(sweep_y)
-    peak_time = sweep_x[peak_index]
+        # Get peak volt, index and time
+        peak_volt = max(sweep_y)
+        peak_index = np.argmax(sweep_y)
+        peak_time = sweep_x[peak_index]
 
-    dvdt_threshold = int(spinbox_dvdt.get())
+        dvdt_threshold = int(spinbox_dvdt.get())
 
-    # # Get threshold by going backwards from voltage peak
-    # k = peak_index
-    # while sweep_y_d[k] < dvdt_threshold:
-    #     k -= 1
-    # while sweep_y_d[k] > dvdt_threshold:
-    #     k-= 1
-    # threshold_index = k
-    # threshold_volt = sweep_y[threshold_index]
-    # threshold_time = sweep_x[threshold_index]
-    
-    # get threshold thorugh convoluted method but technically more accurate to physiology
-    k = current_injection_start(sweep_c) + 30
-    sweep_y_d_2 = np.diff(sweep_y_d) / (1000 * np.diff(sweep_x_d))
-    time_at_k = sweep_x[k]
-    while sweep_y_d[k] < dvdt_threshold or sweep_y_d_2[k] < 15:
-        test_2d = sweep_y_d_2[k]
-        test_v = sweep_y_d[k]
-        k += 1
-    threshold_index = k
-    threshold_volt = sweep_y[threshold_index]
-    threshold_time = sweep_x[threshold_index]
+        # # Get threshold by going backwards from voltage peak
+        # k = peak_index
+        # while sweep_y_d[k] < dvdt_threshold:
+        #     k -= 1
+        # while sweep_y_d[k] > dvdt_threshold:
+        #     k-= 1
+        # threshold_index = k
+        # threshold_volt = sweep_y[threshold_index]
+        # threshold_time = sweep_x[threshold_index]
+        
+        # get threshold thorugh convoluted method but technically more accurate to physiology
+        k = current_injection_start(sweep_c) + 30
+        sweep_y_d_2 = np.diff(sweep_y_d_filtered) / (1000 * np.diff(sweep_x_d))
 
+        if use_window == 1:
+            k = 0
+            while sweep_x[k] < lower_window:
+                k += 1
+            
+            while (sweep_y_d_filtered[k] < dvdt_threshold or sweep_y_d_2[k] < 0) and sweep_x[k] < upper_window:
+                k += 1
+            threshold_index = k
+            threshold_volt = sweep_y[threshold_index]
+            threshold_time = sweep_x[threshold_index] 
+        else:
+            while sweep_y_d_filtered[k] < dvdt_threshold or sweep_y_d_2[k] < 15:
+                k += 1
+            threshold_index = k
+            threshold_volt = sweep_y[threshold_index]
+            threshold_time = sweep_x[threshold_index]
+        
+        if check_threshold.get() == True:
+            threshold_window(sweep_x, sweep_y, threshold_time, threshold_volt, "1s")
+        
+        else:
+            window_check_bool = 1
+
+    window_check_bool = 0
     
     # Find the deltas for rising phase
     halfwidth_volt = (peak_volt + threshold_volt) / 2
@@ -1194,7 +1329,7 @@ def short_rheo_1s(file_name, f):
     # determine ahp points
     l = k
     # find the nearest steady state point
-    while sweep_y_d[l] < 0: 
+    while sweep_y_d_filtered[l] < 0: 
         l += 1
     
     while sweep_y[l] > steady_state_volt:
@@ -1273,6 +1408,22 @@ def short_rheo_1s(file_name, f):
     print("Upstroke-Downstroke ratio: " + str(rise_time_10_90 / fall_time_10_90))
     f.write("Upstroke-Downstroke ratio:, " + str(rise_time_10_90 / fall_time_10_90))
     f.write('\n')
+
+    phase_plane(sweep_x_d, sweep_y_1, sweep_y_d, "1s")
+
+    # Graphing single AP
+    plt.clf()
+    plt.grid()
+    ax1 = plt.subplot()
+    # ax2 = ax1.twinx()
+    ax1.set_ylabel(abf.sweepLabelY)
+    ax1.set_xlabel(abf.sweepLabelX)
+    # ax2.set_ylabel(abf.sweepLabelC)
+    ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % sweep_number)
+    image_name = no_spaces(output_file_entry.get()) + "_rheo_1s_single_ap_graph.png"
+    plt.title(image_name[:-4])
+    image_path = os.path.join(final_directory, image_name)
+    plt.savefig(image_path)
 
 
 def phase_plane(sweep_x, sweep_y, sweep_y_d, step):
@@ -1519,7 +1670,7 @@ phase_plane_bool_1s = False
 
 window = tk.Tk()
 window.title("ABRACADABRA")
-window.geometry('600x500')
+window.geometry('600x475')
 try:
     window.iconbitmap(os.getcwd() + "\\ABRACADABRA.ico")
 except:
@@ -1546,6 +1697,12 @@ output_file_name_variable = tk.StringVar()
 output_file_entry = tk.Entry(window, textvariable=output_file_name_variable, width=40)
 bool_reset_window = False
 check_button_ram = 0
+check_threshold = tk.BooleanVar()
+window_check_bool = 0
+upper_window = 0
+lower_window = 0
+use_window = 0
+sweep_ram = 0
+keep_window_open = 1
 
-while True:
-    gui()
+gui()
