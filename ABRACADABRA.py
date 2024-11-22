@@ -1177,14 +1177,16 @@ def short_rheo_1s(file_name, f):
         k = 0
         curr_start_index = current_injection_start(sweep_c)
         curr_end_index = curr_start_index + 1
-        length = len(sweep_c)
-        while sweep_c[curr_end_index] != 0:
-            curr_end_index += 1
-        curr_end_index -= 1
+        if curr_start_index != 0:
+            while sweep_c[curr_end_index] != 0:
+                curr_end_index += 1
+            curr_end_index -= 1
 
-        current_window_dvdt = sweep_y_d[curr_start_index + 100:curr_end_index]
+            current_window_dvdt = sweep_y_d[curr_start_index + 100:curr_end_index]
 
-        dv_peak = max(current_window_dvdt)
+            dv_peak = max(current_window_dvdt)
+        else:
+            dv_peak = 0
     sweep_ram = sweep_number    
     print("sweep number = " + str(sweep_number))
 
@@ -1289,9 +1291,6 @@ def short_rheo_1s(file_name, f):
     rise_delta = peak_volt - threshold_volt
     rise_volt_10 = (rise_delta * .1) + threshold_volt
     rise_volt_90 = (rise_delta * .9) + threshold_volt
-    fall_delta = steady_state_volt - peak_volt
-    fall_volt_10 = (fall_delta * .1) + peak_volt
-    fall_volt_90 = (fall_delta * .9) + peak_volt
     
     # find the time points of rising phase
     k = threshold_index
@@ -1309,18 +1308,6 @@ def short_rheo_1s(file_name, f):
 
     # find time points of falling phase
     k = peak_index
-    while sweep_y[k] > fall_volt_10:
-        k += 1
-    fall_time_10 = sweep_x[k]
-
-    while sweep_y[k] > halfwidth_volt:
-        k += 1
-    halfwidth_end = sweep_x[k]
-
-    while sweep_y[k] > fall_volt_90:
-        k += 1
-    fall_time_90 = sweep_x[k]
-
     while sweep_y[k] > steady_state_volt:
         k += 1
     end_fall = sweep_x[k]
@@ -1341,11 +1328,25 @@ def short_rheo_1s(file_name, f):
     ahp_array = sweep_y[end_fall_index:ap_end_index]
     ahp = min(ahp_array)
     ahp_index = np.argmin(ahp_array)
-    
+    fall_delta = ahp - peak_volt
+    fall_volt_10 = (fall_delta * .1) + peak_volt
+    fall_volt_90 = (fall_delta * .9) + peak_volt
     ahp_halfwidth_volt = (steady_state_volt + ahp) / 2
 
     # find ahp time points
-    k = end_fall_index
+    k = peak_index
+    while sweep_y[k] > fall_volt_10:
+        k += 1
+    fall_time_10 = sweep_x[k]
+
+    while sweep_y[k] > halfwidth_volt:
+        k += 1
+    halfwidth_end = sweep_x[k]
+
+    while sweep_y[k] > fall_volt_90:
+        k += 1
+    fall_time_90 = sweep_x[k]
+
     while sweep_y[k] > ahp_halfwidth_volt:
         k +=1
     ahp_halfwidth_start = sweep_x[k]
