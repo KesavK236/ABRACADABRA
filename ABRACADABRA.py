@@ -1,6 +1,7 @@
 import os
 import pyabf
 import shutil
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import tkinter as tk
@@ -194,11 +195,12 @@ def gui():
     else:
         window.protocol("WM_DELETE_WINDOW", on_closing)
         window.mainloop()
-        print("continuing")
+
 
 
 def on_closing():
     window.destroy()
+    sys.exit()
 
 
 def file_name_presentation(file_name):
@@ -471,10 +473,11 @@ def threshold_window(sweep_x, sweep_y, threshold_time, threshold_volt, protocol)
     global window_check_bool 
     global window_upper_limit_entry
     global window_lower_limit_entry
+    global photo
     keep_window_open = 1
-    thresh_window = tk.Tk()
+    thresh_window = tk.Toplevel()
     thresh_window.title("Threshold Check")
-    thresh_window.geometry("600x200")   
+    thresh_window.geometry("640x650")   
     current_directory = os.getcwd()
     try:
         thresh_window.iconbitmap(current_directory + "\\ABRACADABRA.ico")
@@ -487,10 +490,8 @@ def threshold_window(sweep_x, sweep_y, threshold_time, threshold_volt, protocol)
     ax1.plot(sweep_x, sweep_y, alpha=.5)
     ax1.plot(threshold_time, threshold_volt, marker="o", markersize=2, markeredgecolor="green", markerfacecolor="green")
     plt.grid()
-    image_name = protocol + " Short Rheo Trace with Estimated Threshold.jpg"
-    plt.title(image_name[:-4])
-
-    plt.show(block=False)
+    image_name = current_directory + "\\imageram\\" + protocol + " Short Rheo Trace with Estimated Threshold.png"
+    plt.savefig(image_name)
 
     button_thresh_good = tk.Button(thresh_window, text="Threshold is good!", width=20, height=1, bg="grey", fg="black",
                                     command=thresh_good_button)
@@ -502,15 +503,23 @@ def threshold_window(sweep_x, sweep_y, threshold_time, threshold_volt, protocol)
     window_upper_limit_entry = tk.Entry(thresh_window, width=5)
     window_lower_limit_label = tk.Label(thresh_window, text="Lower Time Limit (sec):")
     window_lower_limit_entry = tk.Entry(thresh_window, width=5)
-    button_thresh_good.grid(column=0, row=4, padx=15, pady=15)
-    button_thresh_window.grid(column=1, row=4, padx=15, pady=15, columnspan=2)
-    button_sweep_increase.grid(column=3, row=4, padx=15, pady=15)
-    thresh_question_label = tk.Label(thresh_window, text="Does the chosen threshold look correct?")
-    thresh_question_label.grid(column=0, row=1, columnspan=3, pady=15)
-    window_upper_limit_label.grid(column=1, row=2, sticky="E")
-    window_upper_limit_entry.grid(column=2, row=2, sticky="W")    
-    window_lower_limit_label.grid(column=1, row=3, sticky="E")
-    window_lower_limit_entry.grid(column=2, row=3, sticky="W")
+    button_thresh_good.grid(column=0, row=5, padx=15, pady=15)
+    button_thresh_window.grid(column=1, row=5, padx=15, pady=15, columnspan=2)
+    button_sweep_increase.grid(column=3, row=5, padx=15, pady=15)
+    thresh_question_label = tk.Label(thresh_window, text="Does the chosen threshold look correct?", font=("Arial", 12))
+    
+    pil_image = Image.open(image_name)
+    photo = ImageTk.PhotoImage(pil_image)
+    image_label = tk.Label(thresh_window, image=photo)
+    image_label.image = photo
+
+    thresh_question_label.grid(column=0, row=1, columnspan=4)
+    window_upper_limit_label.grid(column=1, row=3, sticky="E")
+    window_upper_limit_entry.grid(column=2, row=3, sticky="W")    
+    window_lower_limit_label.grid(column=1, row=4, sticky="E")
+    window_lower_limit_entry.grid(column=2, row=4, sticky="W")
+    image_label.grid(column=0, columnspan=4, row=2)
+
     while keep_window_open:
         thresh_window.update_idletasks()
         thresh_window.update()
@@ -1882,5 +1891,6 @@ lower_window = 0
 use_window = 0
 sweep_ram = 0
 keep_window_open = 1
+
 
 gui()
