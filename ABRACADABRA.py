@@ -8,10 +8,11 @@ import pandas as pd
 from PIL import ImageTk, Image
 from hampel import hampel
 from scipy.signal import savgol_filter
+from scipy.signal import find_peaks
 from tkinter.filedialog import askopenfilename
 from tkinter import messagebox
 
-# from uuid import uuid4
+from uuid import uuid4
 # from neuroconv.datainterfaces import AbfInterface
 
 # pyinstaller -F --icon="ABRACADABRA.ico" --noconsole ABRACADABRA.py
@@ -26,7 +27,7 @@ def gui():
     if conversion_bool.get() == 1:
         window.geometry('600x720')
     else:
-        window.geometry('600x475')
+        window.geometry('600x500')
 
     clear_frame()
 
@@ -83,6 +84,7 @@ def gui():
     output_file_entry = tk.Entry(window, textvariable=output_file_name_variable, width=40, justify="center")
     check_check = tk.Checkbutton(window, text='Verify Threshold Value?', command=gui,variable=check_threshold,
 	    onvalue=1, offvalue=0)
+    label_warnings = tk.Label(window, text=warning_messages, fg='red', font=("Arial", 10))
 
     # conversion GUI Widgets
     check_conversion = tk.Checkbutton(window, text='Convert to NWB file', command=gui,variable=conversion_bool,
@@ -149,9 +151,10 @@ def gui():
     spinbox_dvdt.grid(row=9, column=3)
     check_conversion.grid(row=11, column=3)
     check_check.grid(row=10, column=3)
-    label_output_name.grid(row=25, column=3)
-    output_file_entry.grid(row=26, column=2, columnspan=4, sticky='W', padx= 70)
-    button_enter.grid(row=27, column=3, pady=5)   
+    label_output_name.grid(row=26, column=3)
+    output_file_entry.grid(row=27, column=2, columnspan=4, sticky='W', padx= 70)
+    button_enter.grid(row=28, column=3, pady=5)
+    label_warnings.grid(row=25, column=2,columnspan=4)   
 
     if conversion_bool.get() == 1:
         label_cell_id.grid(row=12, column=0, columnspan=3, sticky='E')
@@ -196,6 +199,7 @@ def gui():
 
 def on_closing():
     window.destroy()
+
 
 def file_name_presentation(file_name):
     j = len(file_name) - 1
@@ -244,9 +248,27 @@ def file_change4():
     global abf
     global filename4
     global bool_reset_window
+    global warning_messages
     filename4 = askopenfilename()
+    warning_messages = ''
     if filename4 == '':
         filename4 = "No File Chosen"
+    else:
+        abf = pyabf.ABF(filename4)
+        abf.setSweep(0)
+        sweep_x = np.array(abf.sweepX)
+        sweep_c = np.array(abf.sweepC)
+
+        # calculate derivative of sweep_y
+        sweep_c_d = np.diff(sweep_c) / (1000 * np.diff(sweep_x))
+        sweep_x_d = sweep_x[1:len(sweep_x)]
+
+        # get time of current injection
+        curr_start_index = current_injection_start(sweep_c)
+        if sweep_c_d[curr_start_index + 500] == 0:
+            warning_messages = 'Ramp 1s file is not a Ramp!'
+
+
     bool_reset_window = True
     gui()
 
@@ -255,9 +277,26 @@ def file_change5():
     global abf
     global filename5
     global bool_reset_window
+    global warning_messages
     filename5 = askopenfilename()
     if filename5 == '':
         filename5 = "No File Chosen"
+    else:
+        abf = pyabf.ABF(filename5)
+        abf.setSweep(0)
+        sweep_x = np.array(abf.sweepX)
+        sweep_c = np.array(abf.sweepC)
+
+        # calculate derivative of sweep_y
+        sweep_c_d = np.diff(sweep_c) / (1000 * np.diff(sweep_x))
+        sweep_x_d = sweep_x[1:len(sweep_x)]
+
+        # get time of current injection
+        curr_start_index = current_injection_start(sweep_c)
+        if sweep_c_d[curr_start_index + 500] == 0:
+            warning_messages = 'Ramp 4x file is not a Ramp!'
+
+
     bool_reset_window = True
     gui()
 
@@ -425,6 +464,7 @@ def no_spaces(name):
             name = name.replace(' ', '_')
     return name
 
+
 def threshold_window(sweep_x, sweep_y, threshold_time, threshold_volt, protocol):
     global thresh_window
     global keep_window_open
@@ -484,6 +524,7 @@ def thresh_good_button():
     global keep_window_open
     window_check_bool = 1
     keep_window_open = 0
+
 
 def window_button():
     global upper_window
@@ -553,7 +594,8 @@ def rheo_1s(file_name, f):
     num_sweep = num_sweeps()
     hyper_pol_input_res = 0
     hyper_pol_count = 0
-    average_sag = 0
+    delta_sag = 0
+    sag_ratio = 0
     ap_bool = 0
     current_threshold = 0
     rheobase = 0
@@ -608,9 +650,10 @@ def rheo_1s(file_name, f):
 
              # input resistance
             if hyper_pol_count < 1:
-                average_sag = v_min / end_volt
-
-            hyper_pol_input_res += (((end_volt - base_volt) * (10 ** -3)) / (end_curr * (10 ** -9)))
+                delta_sag = (v_min - end_volt)
+                sag_ratio = delta_sag / (v_min - base_volt)
+                hyper_pol_input_res += (((end_volt - base_volt) * (10 ** -3)) / (end_curr * (10 ** -12)))
+            
             hyper_pol_count += 1
 
         ap_max = max(sweep_y)
@@ -635,13 +678,19 @@ def rheo_1s(file_name, f):
             image_made_bool = 1
 
     if hyper_pol_count > 0:
-        input_res = hyper_pol_input_res / ((10 ** 6)* hyper_pol_count)
+        input_res = hyper_pol_input_res / ((10 ** 9))
         omega = chr(0x3a9)
-        print("Average Input Resistance (M" + omega + "): " + str(input_res))
-        f.write("Average Input Resistance (Mega Ohms):, " + str(input_res))
+        print("Average Input Resistance (G" + omega + "): " + str(input_res))
+        f.write("Average Input Resistance (Giga Ohms):, " + str(input_res))
         f.write('\n')
-        print("Voltage Sag: " + str(average_sag))
-        f.write("Voltage Sag:, " + str(average_sag))
+        print("Sag Peak (mV): " + str(v_min))
+        f.write("Sag Peak (mV):, " + str(v_min))
+        f.write('\n')
+        print("Delta Sag (mV): " + str(delta_sag))
+        f.write("Delta Sag (mV):, " + str(delta_sag))
+        f.write('\n')
+        print("Sag Ratio: " + str(sag_ratio))
+        f.write("Sag Ratio:, " + str(sag_ratio))
         f.write('\n')
 
     if ap_bool == 1:
@@ -849,7 +898,7 @@ def ramp_4x(file_name, f):
                 finding_peak = 1
 
             # Find the threshold point of subsequent APs
-            elif sweep_y_d[j] >= 0 and ap_found == 0 and finding_peak == 0 and finding_first == 0:
+            elif sweep_y_d[j] >= threshold_dvdt and ap_found == 0 and finding_peak == 0 and finding_first == 0:
                 ap_found = 1
                 finding_peak = 1
 
@@ -1090,8 +1139,18 @@ def short_rheo_5ms(file_name, f):
     print("AP Amplitude (mV): " + str(peak_volt-threshold_volt))
     f.write("AP Amplitude (mV):, " + str(peak_volt-threshold_volt))
     f.write('\n')
+    peak_time = peak_time * 1000
+    # peak_time = two_sig_figs(peak_time)
+    print("Time of Peak (ms): " + str(peak_time))
+    f.write("Time of Peak (ms):, " + str(peak_time))
+    f.write('\n')
     print("AP Voltage Threshold (mV): " + str(threshold_volt))
     f.write("AP Voltage Threshold (mV):, " + str(threshold_volt))
+    f.write('\n')
+    threshold_time = threshold_time * 1000
+    # threshold_time = two_sig_figs(threshold_time)
+    print("Time of Threshold (ms): " + str(threshold_time))
+    f.write("Time of Threshold (ms):, " + str(threshold_time))
     f.write('\n')
     rise_time_raw = two_sig_figs(rise_time_raw)
     rise_time_10_90 = two_sig_figs(rise_time_10_90)
@@ -1143,6 +1202,7 @@ def short_rheo_5ms(file_name, f):
     image_path = os.path.join(final_directory, image_name)
     plt.savefig(image_path)
 
+
 def short_rheo_1s(file_name, f):
     global abf
     global spinbox_dvdt
@@ -1152,6 +1212,7 @@ def short_rheo_1s(file_name, f):
     global use_window
     global sweep_ram
     global check_threshold
+    global warning_messages
     if file_name == "No File Chosen":
         return
     print("Rheo_1s Data:")
@@ -1231,6 +1292,13 @@ def short_rheo_1s(file_name, f):
                 break
         curr_end_index -= 1
 
+        # Get resting voltage
+        resting_start = curr_start_index - 101
+        rest_volt = 0
+        for n in range(0, 100):
+            rest_volt += sweep_y[resting_start + n]
+        rest_volt = rest_volt / 100
+
 
         # Get steady state current at the end of the trace
         count = 0
@@ -1242,7 +1310,8 @@ def short_rheo_1s(file_name, f):
 
         # Get peak volt, index and time
         peak_volt = max(sweep_y)
-        peak_index = np.argmax(sweep_y)
+        peaks = find_peaks(sweep_y, 0,)
+        peak_index = peaks[0][0]
         peak_time = sweep_x[peak_index]
 
         dvdt_threshold = int(spinbox_dvdt.get())
@@ -1258,7 +1327,7 @@ def short_rheo_1s(file_name, f):
         # threshold_time = sweep_x[threshold_index]
         
         # get threshold thorugh convoluted method but technically more accurate to physiology
-        k = current_injection_start(sweep_c) + 30
+        k = current_injection_start(sweep_c) + int(0.002 * abf.dataRate)
         sweep_y_d_2 = np.diff(sweep_y_d_filtered) / (1000 * np.diff(sweep_x_d))
 
         if use_window == 1:
@@ -1308,7 +1377,7 @@ def short_rheo_1s(file_name, f):
 
     # find time points of falling phase
     k = peak_index
-    while sweep_y[k] > steady_state_volt:
+    while sweep_y[k] > threshold_volt:
         k += 1
     end_fall = sweep_x[k]
     end_fall_index = k
@@ -1318,22 +1387,27 @@ def short_rheo_1s(file_name, f):
     # find the nearest steady state point
     while sweep_y_d_filtered[l] < 0: 
         l += 1
-    
-    while sweep_y[l] > steady_state_volt:
-        l += 1
-    ap_end_index = l
+    if sweep_y[l] < steady_state_volt:
+        while sweep_y[l] > steady_state_volt:
+            l += 1
+        ap_end_index = l
+    else:
+        while sweep_y_d_filtered[l] > 0:
+            l += 1
+        ap_end_index = l
 
     ahp = 0
     ahp_index = 0
     ahp_array = sweep_y[end_fall_index:ap_end_index]
     ahp = min(ahp_array)
     ahp_index = np.argmin(ahp_array)
+    ahp_time = sweep_x[ahp_index + end_fall_index]
     fall_delta = ahp - peak_volt
     fall_volt_10 = (fall_delta * .1) + peak_volt
     fall_volt_90 = (fall_delta * .9) + peak_volt
     ahp_halfwidth_volt = (steady_state_volt + ahp) / 2
 
-    # find ahp time points
+    # find falling phase time points
     k = peak_index
     while sweep_y[k] > fall_volt_10:
         k += 1
@@ -1347,6 +1421,8 @@ def short_rheo_1s(file_name, f):
         k += 1
     fall_time_90 = sweep_x[k]
 
+    # Find AHP time points
+    k = peak_index
     while sweep_y[k] > ahp_halfwidth_volt:
         k +=1
     ahp_halfwidth_start = sweep_x[k]
@@ -1358,11 +1434,12 @@ def short_rheo_1s(file_name, f):
 
     rise_time_raw = peak_time - threshold_time
     rise_time_10_90 = rise_time_90 - rise_time_10
-    fall_time_raw = end_fall - peak_time
+    fall_time_raw = ahp_time - peak_time
     fall_time_10_90 = fall_time_90 - fall_time_10
     halfwidth = halfwidth_end - halfwidth_start
     ahp_halfwidth = ahp_halfwidth_start - ahp_halfwidth_end
     rheobase = threshold_curr - holding_curr
+    curr_start_time = sweep_x[curr_start_index]
 
     print("Relative Rheobase (nA): " + str(rheobase))
     f.write("Relative Rheobase (nA):, " + str(rheobase))
@@ -1373,8 +1450,18 @@ def short_rheo_1s(file_name, f):
     print("AP Amplitude (mV): " + str(peak_volt-threshold_volt))
     f.write("AP Amplitude (mV):, " + str(peak_volt-threshold_volt))
     f.write('\n')
+    # peak_time = two_sig_figs(peak_time)
+    peak_time = (peak_time - curr_start_time) * 1000
+    print("Time of Peak (ms): " + str(peak_time))
+    f.write("Time of Peak (ms):, " + str(peak_time))
+    f.write('\n')
     print("AP Voltage Threshold (mV): " + str(threshold_volt))
     f.write("AP Voltage Threshold (mV):, " + str(threshold_volt))
+    f.write('\n')
+    threshold_time = (threshold_time - curr_start_time) * 1000
+    # threshold_time = two_sig_figs(threshold_time)
+    print("Time of Threshold (ms): " + str(threshold_time))
+    f.write("Time of Threshold (ms):, " + str(threshold_time))
     f.write('\n')
     rise_time_raw = two_sig_figs(rise_time_raw)
     rise_time_10_90 = two_sig_figs(rise_time_10_90)
@@ -1421,10 +1508,15 @@ def short_rheo_1s(file_name, f):
     ax1.set_xlabel(abf.sweepLabelX)
     # ax2.set_ylabel(abf.sweepLabelC)
     ax1.plot(sweep_x, sweep_y, alpha=.5, label=" sweep %d voltage" % sweep_number)
+    ax1.plot(sweep_x[ahp_index], ahp, marker="o", markersize=2, markeredgecolor="green", markerfacecolor="green")
     image_name = no_spaces(output_file_entry.get()) + "_rheo_1s_single_ap_graph.png"
     plt.title(image_name[:-4])
     image_path = os.path.join(final_directory, image_name)
     plt.savefig(image_path)
+
+    if threshold_volt / rest_volt > 0.9:
+        print(threshold_volt / rest_volt)
+        warning_messages = "Threshold may be wrong!"
 
 
 def phase_plane(sweep_x, sweep_y, sweep_y_d, step):
@@ -1468,12 +1560,64 @@ def phase_plane(sweep_x, sweep_y, sweep_y_d, step):
     plt.savefig(image_path)
 
 
+def converstion(f, file_name, stim_type):
+    icephys_metadata = {
+        "cell_id": cell_id.get(),
+        "slice_id": slice_id.get(),
+        "targeted_layer": targeted_layer.get(),
+        "inferred_layer": inferred_layer.get(),
+        "recording_sessions": [
+            {
+                "abf_file_name": file_name_presentation(file_name),
+                "stimulus_type": stim_type,
+                "icephys_experiment_type": 'current_clamp'
+            }
+        ]
+    }
+
+    interface = AbfInterface(
+        file_paths=[
+            file_name,
+        ],
+        icephys_metadata=icephys_metadata
+    )
+
+    sex_string = sex.get()
+    if sex_string == "M":
+        sex_string = 'M'
+    elif sex_string == "F":
+        sex_string = 'F'
+    elif sex_string == "O":
+        sex_string = 'O'
+    else:
+        sex_string = 'U'
+
+    metadata = interface.get_metadata()
+    metadata['NWBFile'].update(
+        identifier=str(uuid4()),
+        session_description=session_description.get(),
+        lab=lab.get(),
+        institution=institution.get(),
+        experimenter=[experimenter.get()],
+    )
+    metadata["Subject"] = dict(
+        subject_id=subject_id.get(),
+        species=species.get(),
+        sex=sex_string,
+        date_of_birth=  date_of_birth.get()
+    )
+    interface.run_conversion(nwbfile_path= str(f) + "/" + str(file_name_presentation(file_name))[:-4] + ".nwb", metadata=metadata)
+
+
 def callback():
     global phase_plane_bool_5ms
     global phase_plane_bool_1s
     global output_file_path_pp_5ms
     global final_directory
     global conversion_bool
+    global warning_messages
+    global bool_reset_window
+    warning_messages = ""
     output_file_name = no_spaces(output_file_entry.get())
     output_folder_name = output_file_name + "_outputs"
     current_directory = os.getcwd()
@@ -1489,6 +1633,9 @@ def callback():
         ramp_4x(filename5, f)
         short_rheo_5ms(filename6, f)
         short_rheo_1s(filename7, f)
+        print("ABRACADABRA Version: 2.1")
+        f.write("ABRACADABRA Version:, 2.1")
+        f.write('\n')
     os.system("start EXCEL.EXE " + output_file_path)
     if phase_plane_bool_5ms == True:
         os.system("start EXCEL.EXE " + output_file_path_pp_5ms)
@@ -1496,161 +1643,190 @@ def callback():
     if phase_plane_bool_1s == True:
         os.system("start EXCEL.EXE " + output_file_path_pp_1s)
         phase_plane_bool_1s = False
+    bool_reset_window = True
+    gui()
+    
 
 #   Conversion
     # Metadata info
-    if conversion_bool.get() == 1:
-        df = pd.read_excel('bulk_abf_nwb_converter.xlsx')
-        input_folder = current_directory + "\\inputs"
-        if filename1 != "No File Chosen":
-            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename1)],
-                    'Cell Id' : [cell_id.get()],
-                    'Slice ID' : [slice_id.get()],
-                    'Targeted Layer' : [targeted_layer.get()],
-                    'Inferred Layer' : [inferred_layer.get()],
-                    'Stimulus Type' : ["long_square"],
-                    'Clamp Type' : ["current_clamp"],
-                    'Session Description' : [session_description.get()],
-                    'Lab Name' : [lab.get()],
-                    'Institution Name' : [institution.get()],
-                    'Experimenter Name' : [experimenter.get()],
-                    'Subject ID' : [subject_id.get()],
-                    'Species' : [species.get()],
-                    'Sex' : [sex.get()],
-                    'Date of Birth' : [date_of_birth.get()]
-                    })
-            df = pd.concat([df, df2], axis=0)
-            shutil.copy(filename1, input_folder)
-        if filename2 != "No File Chosen":
-            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename2)],
-                    'Cell Id' : [cell_id.get()],
-                    'Slice ID' : [slice_id.get()],
-                    'Targeted Layer' : [targeted_layer.get()],
-                    'Inferred Layer' : [inferred_layer.get()],
-                    'Stimulus Type' : ["long_square"],
-                    'Clamp Type' : ["current_clamp"],
-                    'Session Description' : [session_description.get()],
-                    'Lab Name' : [lab.get()],
-                    'Institution Name' : [institution.get()],
-                    'Experimenter Name' : [experimenter.get()],
-                    'Subject ID' : [subject_id.get()],
-                    'Species' : [species.get()],
-                    'Sex' : [sex.get()],
-                    'Date of Birth' : [date_of_birth.get()]
-                    })
-            df = pd.concat([df, df2], axis=0)
-            shutil.copy(filename2, input_folder)
-        if filename3 != "No File Chosen":
-            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename3)],
-                    'Cell Id' : [cell_id.get()],
-                    'Slice ID' : [slice_id.get()],
-                    'Targeted Layer' : [targeted_layer.get()],
-                    'Inferred Layer' : [inferred_layer.get()],
-                    'Stimulus Type' : ["long_square"],
-                    'Clamp Type' : ["current_clamp"],
-                    'Session Description' : [session_description.get()],
-                    'Lab Name' : [lab.get()],
-                    'Institution Name' : [institution.get()],
-                    'Experimenter Name' : [experimenter.get()],
-                    'Subject ID' : [subject_id.get()],
-                    'Species' : [species.get()],
-                    'Sex' : [sex.get()],
-                    'Date of Birth' : [date_of_birth.get()]
-                    })
-            df = pd.concat([df, df2], axis=0)
-            shutil.copy(filename3, input_folder)
-        if filename4 != "No File Chosen":
-            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename4)],
-                    'Cell Id' : [cell_id.get()],
-                    'Slice ID' : [slice_id.get()],
-                    'Targeted Layer' : [targeted_layer.get()],
-                    'Inferred Layer' : [inferred_layer.get()],
-                    'Stimulus Type' : ["long_square"],
-                    'Clamp Type' : ["current_clamp"],
-                    'Session Description' : [session_description.get()],
-                    'Lab Name' : [lab.get()],
-                    'Institution Name' : [institution.get()],
-                    'Experimenter Name' : [experimenter.get()],
-                    'Subject ID' : [subject_id.get()],
-                    'Species' : [species.get()],
-                    'Sex' : [sex.get()],
-                    'Date of Birth' : [date_of_birth.get()]
-                    })
-            df = pd.concat([df, df2], axis=0)
-            shutil.copy(filename4, input_folder)
-        if filename5 != "No File Chosen":
-            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename5)],
-                    'Cell Id' : [cell_id.get()],
-                    'Slice ID' : [slice_id.get()],
-                    'Targeted Layer' : [targeted_layer.get()],
-                    'Inferred Layer' : [inferred_layer.get()],
-                    'Stimulus Type' : ["long_square"],
-                    'Clamp Type' : ["current_clamp"],
-                    'Session Description' : [session_description.get()],
-                    'Lab Name' : [lab.get()],
-                    'Institution Name' : [institution.get()],
-                    'Experimenter Name' : [experimenter.get()],
-                    'Subject ID' : [subject_id.get()],
-                    'Species' : [species.get()],
-                    'Sex' : [sex.get()],
-                    'Date of Birth' : [date_of_birth.get()]
-                    })
-            df = pd.concat([df, df2], axis=0)
-            shutil.copy(filename5, input_folder)
-        if filename6 != "No File Chosen":
-            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename6)],
-                    'Cell Id' : [cell_id.get()],
-                    'Slice ID' : [slice_id.get()],
-                    'Targeted Layer' : [targeted_layer.get()],
-                    'Inferred Layer' : [inferred_layer.get()],
-                    'Stimulus Type' : ["long_square"],
-                    'Clamp Type' : ["current_clamp"],
-                    'Session Description' : [session_description.get()],
-                    'Lab Name' : [lab.get()],
-                    'Institution Name' : [institution.get()],
-                    'Experimenter Name' : [experimenter.get()],
-                    'Subject ID' : [subject_id.get()],
-                    'Species' : [species.get()],
-                    'Sex' : [sex.get()],
-                    'Date of Birth' : [date_of_birth.get()]
-                    })
-            df = pd.concat([df, df2], axis=0)
-            shutil.copy(filename6, input_folder)
-        if filename7 != "No File Chosen":
-            df2 = pd.DataFrame({'File Name': [file_name_presentation(filename7)],
-                    'Cell Id' : [cell_id.get()],
-                    'Slice ID' : [slice_id.get()],
-                    'Targeted Layer' : [targeted_layer.get()],
-                    'Inferred Layer' : [inferred_layer.get()],
-                    'Stimulus Type' : ["long_square"],
-                    'Clamp Type' : ["current_clamp"],
-                    'Session Description' : [session_description.get()],
-                    'Lab Name' : [lab.get()],
-                    'Institution Name' : [institution.get()],
-                    'Experimenter Name' : [experimenter.get()],
-                    'Subject ID' : [subject_id.get()],
-                    'Species' : [species.get()],
-                    'Sex' : [sex.get()],
-                    'Date of Birth' : [date_of_birth.get()]
-                    })
-            df = pd.concat([df, df2], axis=0)
-            shutil.copy(filename7, input_folder)
-        df.to_excel("bulk_abf_nwb_converter.xlsx", index=False)
-        # for j in range(og_len, i):
-        #     df.iloc[j, 1] = cell_id.get()
-        #     df.iloc[j, 2] = slice_id.get()
-        #     df.iloc[j, 3] = targeted_layer.get()
-        #     df.iloc[j, 4] = inferred_layer.get()
-        #     df.iloc[i, 5] = "long_square"
-        #     df.iloc[i, 6] = "current_clamp"
-        #     df.iloc[j, 7] = session_description.get()
-        #     df.iloc[j, 8] = lab.get()
-        #     df.iloc[j, 9] = institution.get()
-        #     df.iloc[j, 10] = experimenter.get()
-        #     df.iloc[j, 11] = subject_id.get()
-        #     df.iloc[j, 12] = species.get()
-        #     df.iloc[j, 13] = sex.get()
-        #     df.iloc[j, 14] = date_of_birth.get()
+    # if conversion_bool.get() == 1:
+    #     # df = pd.read_excel('bulk_abf_nwb_converter.xlsx')
+    #     # input_folder = current_directory + "\\inputs"
+    #     if filename1 != "No File Chosen":
+    #         converstion(final_directory, filename1, stim_type="long square")
+    #         # print("Error in the conversion of " + file_name_presentation(filename1))
+    #         # df2 = pd.DataFrame({'File Name': [file_name_presentation(filename1)],
+    #         #         'Cell Id' : [cell_id.get()],
+    #         #         'Slice ID' : [slice_id.get()],
+    #         #         'Targeted Layer' : [targeted_layer.get()],
+    #         #         'Inferred Layer' : [inferred_layer.get()],
+    #         #         'Stimulus Type' : ["long_square"],
+    #         #         'Clamp Type' : ["current_clamp"],
+    #         #         'Session Description' : [session_description.get()],
+    #         #         'Lab Name' : [lab.get()],
+    #         #         'Institution Name' : [institution.get()],
+    #         #         'Experimenter Name' : [experimenter.get()],
+    #         #         'Subject ID' : [subject_id.get()],
+    #         #         'Species' : [species.get()],
+    #         #         'Sex' : [sex.get()],
+    #         #         'Date of Birth' : [date_of_birth.get()]
+    #         #         })
+    #         # df = pd.concat([df, df2], axis=0)
+    #         # shutil.copy(filename1, input_folder)
+    #     if filename2 != "No File Chosen":
+    #         try:
+    #             converstion(final_directory, filename1, stim_type="long square")
+    #         except:
+    #             print("Error in the conversion of " + file_name_presentation(filename2))
+    #         # df2 = pd.DataFrame({'File Name': [file_name_presentation(filename2)],
+    #         #         'Cell Id' : [cell_id.get()],
+    #         #         'Slice ID' : [slice_id.get()],
+    #         #         'Targeted Layer' : [targeted_layer.get()],
+    #         #         'Inferred Layer' : [inferred_layer.get()],
+    #         #         'Stimulus Type' : ["long_square"],
+    #         #         'Clamp Type' : ["current_clamp"],
+    #         #         'Session Description' : [session_description.get()],
+    #         #         'Lab Name' : [lab.get()],
+    #         #         'Institution Name' : [institution.get()],
+    #         #         'Experimenter Name' : [experimenter.get()],
+    #         #         'Subject ID' : [subject_id.get()],
+    #         #         'Species' : [species.get()],
+    #         #         'Sex' : [sex.get()],
+    #         #         'Date of Birth' : [date_of_birth.get()]
+    #         #         })
+    #         # df = pd.concat([df, df2], axis=0)
+    #         # shutil.copy(filename2, input_folder)
+    #     if filename3 != "No File Chosen":
+    #         try:
+    #             converstion(final_directory, filename1, stim_type="long square")
+    #         except:
+    #             print("Error in the conversion of " + file_name_presentation(filename3))
+    #         # df2 = pd.DataFrame({'File Name': [file_name_presentation(filename3)],
+    #         #         'Cell Id' : [cell_id.get()],
+    #         #         'Slice ID' : [slice_id.get()],
+    #         #         'Targeted Layer' : [targeted_layer.get()],
+    #         #         'Inferred Layer' : [inferred_layer.get()],
+    #         #         'Stimulus Type' : ["long_square"],
+    #         #         'Clamp Type' : ["current_clamp"],
+    #         #         'Session Description' : [session_description.get()],
+    #         #         'Lab Name' : [lab.get()],
+    #         #         'Institution Name' : [institution.get()],
+    #         #         'Experimenter Name' : [experimenter.get()],
+    #         #         'Subject ID' : [subject_id.get()],
+    #         #         'Species' : [species.get()],
+    #         #         'Sex' : [sex.get()],
+    #         #         'Date of Birth' : [date_of_birth.get()]
+    #         #         })
+    #         # df = pd.concat([df, df2], axis=0)
+    #         # shutil.copy(filename3, input_folder)
+    #     if filename4 != "No File Chosen":
+    #         try:
+    #             converstion(final_directory, filename1, stim_type="ramp")
+    #         except:
+    #             print("Error in the conversion of " + file_name_presentation(filename4))
+    #         # df2 = pd.DataFrame({'File Name': [file_name_presentation(filename4)],
+    #         #         'Cell Id' : [cell_id.get()],
+    #         #         'Slice ID' : [slice_id.get()],
+    #         #         'Targeted Layer' : [targeted_layer.get()],
+    #         #         'Inferred Layer' : [inferred_layer.get()],
+    #         #         'Stimulus Type' : ["long_square"],
+    #         #         'Clamp Type' : ["current_clamp"],
+    #         #         'Session Description' : [session_description.get()],
+    #         #         'Lab Name' : [lab.get()],
+    #         #         'Institution Name' : [institution.get()],
+    #         #         'Experimenter Name' : [experimenter.get()],
+    #         #         'Subject ID' : [subject_id.get()],
+    #         #         'Species' : [species.get()],
+    #         #         'Sex' : [sex.get()],
+    #         #         'Date of Birth' : [date_of_birth.get()]
+    #         #         })
+    #         # df = pd.concat([df, df2], axis=0)
+    #         # shutil.copy(filename4, input_folder)
+    #     if filename5 != "No File Chosen":
+    #         try:
+    #             converstion(final_directory, filename1, stim_type="ramp")
+    #         except:
+    #             print("Error in the conversion of " + file_name_presentation(filename5))
+    #         # df2 = pd.DataFrame({'File Name': [file_name_presentation(filename5)],
+    #         #         'Cell Id' : [cell_id.get()],
+    #         #         'Slice ID' : [slice_id.get()],
+    #         #         'Targeted Layer' : [targeted_layer.get()],
+    #         #         'Inferred Layer' : [inferred_layer.get()],
+    #         #         'Stimulus Type' : ["long_square"],
+    #         #         'Clamp Type' : ["current_clamp"],
+    #         #         'Session Description' : [session_description.get()],
+    #         #         'Lab Name' : [lab.get()],
+    #         #         'Institution Name' : [institution.get()],
+    #         #         'Experimenter Name' : [experimenter.get()],
+    #         #         'Subject ID' : [subject_id.get()],
+    #         #         'Species' : [species.get()],
+    #         #         'Sex' : [sex.get()],
+    #         #         'Date of Birth' : [date_of_birth.get()]
+    #         #         })
+    #         # df = pd.concat([df, df2], axis=0)
+    #         # shutil.copy(filename5, input_folder)
+    #     if filename6 != "No File Chosen":
+    #         try:
+    #             converstion(final_directory, filename1, stim_type="short square")
+    #         except:
+    #             print("Error in the conversion of " + file_name_presentation(filename6))
+    #         # df2 = pd.DataFrame({'File Name': [file_name_presentation(filename6)],
+    #         #         'Cell Id' : [cell_id.get()],
+    #         #         'Slice ID' : [slice_id.get()],
+    #         #         'Targeted Layer' : [targeted_layer.get()],
+    #         #         'Inferred Layer' : [inferred_layer.get()],
+    #         #         'Stimulus Type' : ["long_square"],
+    #         #         'Clamp Type' : ["current_clamp"],
+    #         #         'Session Description' : [session_description.get()],
+    #         #         'Lab Name' : [lab.get()],
+    #         #         'Institution Name' : [institution.get()],
+    #         #         'Experimenter Name' : [experimenter.get()],
+    #         #         'Subject ID' : [subject_id.get()],
+    #         #         'Species' : [species.get()],
+    #         #         'Sex' : [sex.get()],
+    #         #         'Date of Birth' : [date_of_birth.get()]
+    #         #         })
+    #         # df = pd.concat([df, df2], axis=0)
+    #         # shutil.copy(filename6, input_folder)
+    #     if filename7 != "No File Chosen":
+    #         try:
+    #             converstion(final_directory, filename1, stim_type="long square")
+    #         except:
+    #             print("Error in the conversion of " + file_name_presentation(filename7))
+    #         # df2 = pd.DataFrame({'File Name': [file_name_presentation(filename7)],
+    #         #         'Cell Id' : [cell_id.get()],
+    #         #         'Slice ID' : [slice_id.get()],
+    #         #         'Targeted Layer' : [targeted_layer.get()],
+    #         #         'Inferred Layer' : [inferred_layer.get()],
+    #         #         'Stimulus Type' : ["long_square"],
+    #         #         'Clamp Type' : ["current_clamp"],
+    #         #         'Session Description' : [session_description.get()],
+    #         #         'Lab Name' : [lab.get()],
+    #         #         'Institution Name' : [institution.get()],
+    #         #         'Experimenter Name' : [experimenter.get()],
+    #         #         'Subject ID' : [subject_id.get()],
+    #         #         'Species' : [species.get()],
+    #         #         'Sex' : [sex.get()],
+    #         #         'Date of Birth' : [date_of_birth.get()]
+    #         #         })
+    #         # df = pd.concat([df, df2], axis=0)
+    #         # shutil.copy(filename7, input_folder)
+    #     # df.to_excel("bulk_abf_nwb_converter.xlsx", index=False)
+    #     # for j in range(og_len, i):
+    #     #     df.iloc[j, 1] = cell_id.get()
+    #     #     df.iloc[j, 2] = slice_id.get()
+    #     #     df.iloc[j, 3] = targeted_layer.get()
+    #     #     df.iloc[j, 4] = inferred_layer.get()
+    #     #     df.iloc[i, 5] = "long_square"
+    #     #     df.iloc[i, 6] = "current_clamp"
+    #     #     df.iloc[j, 7] = session_description.get()
+    #     #     df.iloc[j, 8] = lab.get()
+    #     #     df.iloc[j, 9] = institution.get()
+    #     #     df.iloc[j, 10] = experimenter.get()
+    #     #     df.iloc[j, 11] = subject_id.get()
+    #     #     df.iloc[j, 12] = species.get()
+    #     #     df.iloc[j, 13] = sex.get()
+    #     #     df.iloc[j, 14] = date_of_birth.get()
     print("Analysis Complete")
     return
 
@@ -1668,6 +1844,7 @@ output_file_path_pp_1s = ""
 buttonClicked = False
 phase_plane_bool_5ms = False
 phase_plane_bool_1s = False
+warning_messages = ""
 
 window = tk.Tk()
 window.title("ABRACADABRA")
@@ -1678,7 +1855,7 @@ except:
     print("Icon not in correct directory, but not necessary")
 conversion_bool = tk.IntVar()
 spinval = tk.StringVar()
-spinval.set("5")
+spinval.set("10")
 spinbox_dvdt = tk.Spinbox(window, from_=1.0, to=100.0, textvariable=spinval, width=5)
 cell_id = tk.StringVar()
 slice_id = tk.StringVar()
