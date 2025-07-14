@@ -51,6 +51,7 @@ Kesav Kothapalli
     * Added a threshold visualizer so user can verify threshold during analysis
     * Changes Voltage sag to Sag peak, delta sag, and sag ratio
     * Changed falling phase to be from peak to ahp
+    * Added AP count visualizer so users can verify AP counts
 
 ## Acknowledgments
 

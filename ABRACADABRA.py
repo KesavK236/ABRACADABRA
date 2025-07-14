@@ -12,11 +12,11 @@ from scipy.signal import savgol_filter
 from scipy.signal import find_peaks
 from tkinter.filedialog import askopenfilename
 from tkinter import messagebox
-
 from uuid import uuid4
 # from neuroconv.datainterfaces import AbfInterface
-
 # pyinstaller -F --icon="ABRACADABRA.ico" --noconsole ABRACADABRA.py
+
+
 def gui():
     global output_file_entry
     global spinbox_dvdt
@@ -30,7 +30,6 @@ def gui():
         window.geometry('600x720')
     else:
         window.geometry('600x550')
-
     clear_frame()
 
     clear_button_w = 8
@@ -274,7 +273,6 @@ def file_change4():
         if sweep_c_d[curr_start_index + 500] == 0:
             warning_messages = 'Ramp 1s file is not a Ramp!'
 
-
     bool_reset_window = True
     gui()
 
@@ -478,7 +476,6 @@ def threshold_window(sweep_x, sweep_y, threshold_time, threshold_volt, protocol)
     global window_check_bool 
     global window_upper_limit_entry
     global window_lower_limit_entry
-    global photo
     keep_thresh_window_open = 1
     thresh_window = tk.Toplevel()
     thresh_window.title("Threshold Check")
@@ -516,7 +513,6 @@ def threshold_window(sweep_x, sweep_y, threshold_time, threshold_volt, protocol)
     pil_image = Image.open(image_name)
     photo = ImageTk.PhotoImage(pil_image)
     image_label = tk.Label(thresh_window, image=photo)
-    image_label.image = photo
 
     thresh_question_label.grid(column=0, row=1, columnspan=4)
     window_upper_limit_label.grid(column=1, row=3, sticky="E")
@@ -563,20 +559,98 @@ def sweep_increase():
     keep_thresh_window_open = 0
     sweep_ram += 1
 
-def ap_count_check():
-    global ap_counts
+
+def ap_count_window(image_names, ap_counts):
     global spin_1x
     global spin_2x
     global spin_3x
     global spin_4x
-    global keep_ap_window_open
+    global ap_verify_window
+    ap_verify_window = tk.Toplevel()
+    ap_verify_window.title("Verify Action Potential Counts")
+    ap_verify_window.geometry("1280x400")   
+    current_directory = os.getcwd()
+    try:
+        ap_verify_window.iconbitmap(current_directory + "\\ABRACADABRA.ico")
+    except:
+        print("Icon not in correct directory, but not necessary")
+
+    verify_label = tk.Label(ap_verify_window, text="Verify Calculated Action Potential Counts", font=("Arial", 16))
+    photos = [None, None, None, None]
+    for i in range(4):
+        pil_image = Image.open(image_names[i])
+        resized_photo = pil_image.resize((320, 240), Image.LANCZOS)
+        photos[i] = ImageTk.PhotoImage(resized_photo)
+    image_1x_label = tk.Label(ap_verify_window, image=photos[0])
+    image_2x_label = tk.Label(ap_verify_window, image=photos[1])
+    image_3x_label = tk.Label(ap_verify_window, image=photos[2])
+    image_4x_label = tk.Label(ap_verify_window, image=photos[3])
+    calculated_label1 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
+    calculated_label2 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
+    calculated_label3 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
+    calculated_label4 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
+    count_1x_label = tk.Label(ap_verify_window, text=str(ap_counts[0]), font=("Arial", 12))
+    count_2x_label = tk.Label(ap_verify_window, text=str(ap_counts[1]), font=("Arial", 12))
+    count_3x_label = tk.Label(ap_verify_window, text=str(ap_counts[2]), font=("Arial", 12))
+    count_4x_label = tk.Label(ap_verify_window, text=str(ap_counts[3]), font=("Arial", 12))
+    manual_label1 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
+    manual_label2 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
+    manual_label3 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
+    manual_label4 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
+    spin_1x = tk.StringVar()
+    spin_1x.set(str(ap_counts[0]))
+    spin_2x = tk.StringVar()
+    spin_2x.set(str(ap_counts[1]))
+    spin_3x = tk.StringVar()
+    spin_3x.set(str(ap_counts[2]))
+    spin_4x = tk.StringVar()
+    spin_4x.set(str(ap_counts[3]))
+    spinbox_1x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_1x, width=5)
+    spinbox_2x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_2x, width=5)
+    spinbox_3x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_3x, width=5)
+    spinbox_4x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_4x, width=5)
+    verified_button = tk.Button(ap_verify_window, text="Verified!", width=12, height=1, bg= 'grey', fg='black', command=lambda: ap_count_check(ap_counts))
+    
+    verify_label.grid(column=0, columnspan=8, row=0)
+    image_1x_label.grid(column=0, columnspan=2, row=1)
+    image_2x_label.grid(column=2, columnspan=2, row=1)
+    image_3x_label.grid(column=4, columnspan=2, row=1)
+    image_4x_label.grid(column=6, columnspan=2, row=1)
+    calculated_label1.grid(column=0, row=2, sticky='E')
+    calculated_label2.grid(column=2, row=2, sticky='E')
+    calculated_label3.grid(column=4, row=2, sticky='E')
+    calculated_label4.grid(column=6, row=2, sticky='E')
+    count_1x_label.grid(column=1, row=2, sticky='W')
+    count_2x_label.grid(column=3, row=2, sticky='W')
+    count_3x_label.grid(column=5, row=2, sticky='W')
+    count_4x_label.grid(column=7, row=2, sticky='W')
+    manual_label1.grid(column=0, row=3, sticky='E')
+    manual_label2.grid(column=2, row=3, sticky='E')
+    manual_label3.grid(column=4, row=3, sticky='E')
+    manual_label4.grid(column=6, row=3, sticky='E')
+    spinbox_1x.grid(column=1, row=3)
+    spinbox_2x.grid(column=3, row=3)
+    spinbox_3x.grid(column=5, row=3)
+    spinbox_4x.grid(column=7, row=3)
+    verified_button.grid(column=0, columnspan=7, row=4)
+    
+    ap_verify_window.grab_set()
+    ap_verify_window.wait_window()
+    return ap_counts
+
+
+def ap_count_check(ap_counts):
+    global ap_verify_window
+    global spin_1x
+    global spin_2x
+    global spin_3x
+    global spin_4x
 
     ap_counts[0] = int(spin_1x.get())
     ap_counts[1] = int(spin_2x.get())
     ap_counts[2] = int(spin_3x.get())
     ap_counts[3] = int(spin_4x.get())
-    keep_ap_window_open = 0
-    return
+    ap_verify_window.destroy()
 
 def rmp(file_name, f):
     global abf
@@ -706,7 +780,7 @@ def rheo_1s(file_name, f):
             image_made_bool = 1
 
     if hyper_pol_count > 0:
-        input_res = hyper_pol_input_res / ((10 ** 9))
+        input_res = hyper_pol_input_res / ((10 ** 6))
         omega = chr(0x3a9)
         print("Average Input Resistance (G" + omega + "): " + str(input_res))
         f.write("Average Input Resistance (Giga Ohms):, " + str(input_res))
@@ -737,12 +811,6 @@ def rheo_1s(file_name, f):
 def rheo_4x(file_name, f):
     global abf
     global spinbox_dvdt
-    global ap_counts
-    global spin_1x
-    global spin_2x
-    global spin_3x
-    global spin_4x
-    global keep_ap_window_open
     global check_ap_counts
     threshold_dvdt = int(spinbox_dvdt.get())
     if file_name == "No File Chosen":
@@ -810,78 +878,7 @@ def rheo_4x(file_name, f):
         ap_counts[i] = ap_count
     
     if check_ap_counts.get():
-        ap_verify_window = tk.Toplevel()
-        ap_verify_window.title("Verify Action Potential Counts")
-        ap_verify_window.geometry("1280x400")   
-        current_directory = os.getcwd()
-        try:
-            ap_verify_window.iconbitmap(current_directory + "\\ABRACADABRA.ico")
-        except:
-            print("Icon not in correct directory, but not necessary")
-
-        verify_label = tk.Label(ap_verify_window, text="Verify Calculated Action Potential Counts", font=("Arial", 16))
-        photos = [None, None, None, None]
-        for i in range(4):
-            pil_image = Image.open(image_names[i])
-            resized_photo = pil_image.resize((320, 240), Image.LANCZOS)
-            photos[i] = ImageTk.PhotoImage(resized_photo)
-        image_1x_label = tk.Label(ap_verify_window, image=photos[0])
-        image_2x_label = tk.Label(ap_verify_window, image=photos[1])
-        image_3x_label = tk.Label(ap_verify_window, image=photos[2])
-        image_4x_label = tk.Label(ap_verify_window, image=photos[3])
-        calculated_label1 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
-        calculated_label2 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
-        calculated_label3 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
-        calculated_label4 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
-        count_1x_label = tk.Label(ap_verify_window, text=str(ap_counts[0]), font=("Arial", 12))
-        count_2x_label = tk.Label(ap_verify_window, text=str(ap_counts[1]), font=("Arial", 12))
-        count_3x_label = tk.Label(ap_verify_window, text=str(ap_counts[2]), font=("Arial", 12))
-        count_4x_label = tk.Label(ap_verify_window, text=str(ap_counts[3]), font=("Arial", 12))
-        manual_label1 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
-        manual_label2 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
-        manual_label3 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
-        manual_label4 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
-        spin_1x = tk.StringVar()
-        spin_1x.set(str(ap_counts[0]))
-        spin_2x = tk.StringVar()
-        spin_2x.set(str(ap_counts[1]))
-        spin_3x = tk.StringVar()
-        spin_3x.set(str(ap_counts[2]))
-        spin_4x = tk.StringVar()
-        spin_4x.set(str(ap_counts[3]))
-        spinbox_1x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_1x, width=5)
-        spinbox_2x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_2x, width=5)
-        spinbox_3x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_3x, width=5)
-        spinbox_4x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_4x, width=5)
-        verified_button = tk.Button(ap_verify_window, text="Verified!", width=12, height=1, bg= 'grey', fg='black', command=ap_count_check)
-        
-        verify_label.grid(column=0, columnspan=8, row=0)
-        image_1x_label.grid(column=0, columnspan=2, row=1)
-        image_2x_label.grid(column=2, columnspan=2, row=1)
-        image_3x_label.grid(column=4, columnspan=2, row=1)
-        image_4x_label.grid(column=6, columnspan=2, row=1)
-        calculated_label1.grid(column=0, row=2, sticky='E')
-        calculated_label2.grid(column=2, row=2, sticky='E')
-        calculated_label3.grid(column=4, row=2, sticky='E')
-        calculated_label4.grid(column=6, row=2, sticky='E')
-        count_1x_label.grid(column=1, row=2, sticky='W')
-        count_2x_label.grid(column=3, row=2, sticky='W')
-        count_3x_label.grid(column=5, row=2, sticky='W')
-        count_4x_label.grid(column=7, row=2, sticky='W')
-        manual_label1.grid(column=0, row=3, sticky='E')
-        manual_label2.grid(column=2, row=3, sticky='E')
-        manual_label3.grid(column=4, row=3, sticky='E')
-        manual_label4.grid(column=6, row=3, sticky='E')
-        spinbox_1x.grid(column=1, row=3)
-        spinbox_2x.grid(column=3, row=3)
-        spinbox_3x.grid(column=5, row=3)
-        spinbox_4x.grid(column=7, row=3)
-        verified_button.grid(column=0, columnspan=7, row=4)
-        keep_ap_window_open = 1
-        while keep_ap_window_open:
-            ap_verify_window.update_idletasks()
-            ap_verify_window.update()
-        ap_verify_window.destroy()
+        ap_counts = ap_count_window(image_names, ap_counts)
 
     for i in range(4):
         print("Number of Action Potentials in Rheo " + str(i + 1) + "x rheobase:" + str(ap_counts[i]))
@@ -953,12 +950,10 @@ def ramp_1s(file_name, f):
 def ramp_4x(file_name, f):
     global abf
     global spinbox_dvdt
-    global ap_counts
     global spin_1x
     global spin_2x
     global spin_3x
     global spin_4x
-    global keep_ap_window_open
     global check_ap_counts
     threshold_dvdt = int(spinbox_dvdt.get())
     if file_name == "No File Chosen":
@@ -1042,78 +1037,7 @@ def ramp_4x(file_name, f):
         ap_counts[i] = ap_count
 
     if check_ap_counts.get():
-        ap_verify_window = tk.Toplevel()
-        ap_verify_window.title("Verify Action Potential Counts")
-        ap_verify_window.geometry("1280x400")   
-        current_directory = os.getcwd()
-        try:
-            ap_verify_window.iconbitmap(current_directory + "\\ABRACADABRA.ico")
-        except:
-            print("Icon not in correct directory, but not necessary")
-
-        verify_label = tk.Label(ap_verify_window, text="Verify Calculated Action Potential Counts", font=("Arial", 16))
-        photos = [None, None, None, None]
-        for i in range(4):
-            pil_image = Image.open(image_names[i])
-            resized_photo = pil_image.resize((320, 240), Image.LANCZOS)
-            photos[i] = ImageTk.PhotoImage(resized_photo)
-        image_1x_label = tk.Label(ap_verify_window, image=photos[0])
-        image_2x_label = tk.Label(ap_verify_window, image=photos[1])
-        image_3x_label = tk.Label(ap_verify_window, image=photos[2])
-        image_4x_label = tk.Label(ap_verify_window, image=photos[3])
-        calculated_label1 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
-        calculated_label2 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
-        calculated_label3 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
-        calculated_label4 = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Arial", 12))
-        count_1x_label = tk.Label(ap_verify_window, text=str(ap_counts[0]), font=("Arial", 12))
-        count_2x_label = tk.Label(ap_verify_window, text=str(ap_counts[1]), font=("Arial", 12))
-        count_3x_label = tk.Label(ap_verify_window, text=str(ap_counts[2]), font=("Arial", 12))
-        count_4x_label = tk.Label(ap_verify_window, text=str(ap_counts[3]), font=("Arial", 12))
-        manual_label1 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
-        manual_label2 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
-        manual_label3 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
-        manual_label4 = tk.Label(ap_verify_window, text="Verified Count: ", font=("Arial", 12))
-        spin_1x = tk.StringVar()
-        spin_1x.set(str(ap_counts[0]))
-        spin_2x = tk.StringVar()
-        spin_2x.set(str(ap_counts[1]))
-        spin_3x = tk.StringVar()
-        spin_3x.set(str(ap_counts[2]))
-        spin_4x = tk.StringVar()
-        spin_4x.set(str(ap_counts[3]))
-        spinbox_1x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_1x, width=5)
-        spinbox_2x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_2x, width=5)
-        spinbox_3x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_3x, width=5)
-        spinbox_4x = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_4x, width=5)
-        verified_button = tk.Button(ap_verify_window, text="Verified!", width=12, height=1, bg= 'grey', fg='black', command=ap_count_check)
-        
-        verify_label.grid(column=0, columnspan=8, row=0)
-        image_1x_label.grid(column=0, columnspan=2, row=1)
-        image_2x_label.grid(column=2, columnspan=2, row=1)
-        image_3x_label.grid(column=4, columnspan=2, row=1)
-        image_4x_label.grid(column=6, columnspan=2, row=1)
-        calculated_label1.grid(column=0, row=2, sticky='E')
-        calculated_label2.grid(column=2, row=2, sticky='E')
-        calculated_label3.grid(column=4, row=2, sticky='E')
-        calculated_label4.grid(column=6, row=2, sticky='E')
-        count_1x_label.grid(column=1, row=2, sticky='W')
-        count_2x_label.grid(column=3, row=2, sticky='W')
-        count_3x_label.grid(column=5, row=2, sticky='W')
-        count_4x_label.grid(column=7, row=2, sticky='W')
-        manual_label1.grid(column=0, row=3, sticky='E')
-        manual_label2.grid(column=2, row=3, sticky='E')
-        manual_label3.grid(column=4, row=3, sticky='E')
-        manual_label4.grid(column=6, row=3, sticky='E')
-        spinbox_1x.grid(column=1, row=3)
-        spinbox_2x.grid(column=3, row=3)
-        spinbox_3x.grid(column=5, row=3)
-        spinbox_4x.grid(column=7, row=3)
-        verified_button.grid(column=0, columnspan=7, row=4)
-        keep_ap_window_open = 1
-        while keep_ap_window_open:
-            ap_verify_window.update_idletasks()
-            ap_verify_window.update()
-        ap_verify_window.destroy()
+        ap_counts = ap_count_window(image_names, ap_counts)
 
     for i in range(4):
         print("Number of Action Potentials in Ramp " + str(i + 1) + "x threshold: " + str(ap_counts[i]))
