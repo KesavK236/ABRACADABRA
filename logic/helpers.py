@@ -14,7 +14,7 @@ def load_abf(file_name, sweep_num=0, smooth=False, window_length=25, polyorder=3
         abf = loaded
     sweep_x = np.array(abf.sweepX)
     sweep_y = np.array(abf.sweepY)
-
+    sweep_y_raw = sweep_y
     if smooth:
         sweep_y = savgol_filter(sweep_y, window_length=window_length, polyorder=polyorder)
 
@@ -24,7 +24,7 @@ def load_abf(file_name, sweep_num=0, smooth=False, window_length=25, polyorder=3
     y_label = abf.sweepLabelY
     c_label = abf.sweepLabelC
     sample_rate = abf.sampleRate
-    return number_sweeps, sweep_x, sweep_y, sweep_c, x_label, y_label, c_label, loaded, sample_rate
+    return number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate
 
 
 # def load_nwb(file_name, sweep_num=0, smooth=False, window_length=25, polyorder=3, loaded=None):
@@ -144,7 +144,7 @@ def generate_derivatives(sweep_x, sweep_y, hampel_bool=False):
 
 def is_ramp(filename):
     is_ramp_file = True
-    number_sweeps, sweep_x, sweep_y, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name=filename, sweep_num= 1)
+    number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name=filename, sweep_num= 1)
     
     sweep_c_d = np.diff(sweep_c) / (1000 * np.diff(sweep_x))
 

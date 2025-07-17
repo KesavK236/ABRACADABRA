@@ -6,7 +6,7 @@ from scipy.signal import savgol_filter
 from hampel import hampel
 
 def short_rheo_5ms(file_name, f, dvdt, check_threshold):
-    num_sweeps, sweep_x, sweep_y, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name)
+    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name)
 
     print("Rheo_5ms Data:")
     f.write(f"Rheo_5ms Data:\n")
@@ -21,7 +21,7 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
     passed_check_func = 0
 
     while sweep_index < num_sweeps and not threshold_checked:
-        num_sweeps, sweep_x, sweep_y, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded)
+        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded)
 
         sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=False)
         
@@ -41,7 +41,7 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
             while (sweep_y_d[i] >= dvdt or sweep_y_d2[i] < 10 ) and sweep_x[i] > lower_window:
                 i -= 1
             threshold_index = i
-            threshold_volt = sweep_y[threshold_index]
+            threshold_volt = sweep_y_raw[threshold_index]
             threshold_time = sweep_x[threshold_index] 
             threshold_curr = sweep_c[curr_start_index + 5]
 
@@ -62,8 +62,8 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
     steady_state_volt = np.mean(sweep_y[len(sweep_c) - 200 : len(sweep_c)])
 
 
-    peak_volt = max(sweep_y)
     peak_index = np.argmax(sweep_y)
+    peak_volt = sweep_y_raw[peak_index]
     peak_time = sweep_x[peak_index]
 
     # Find the deltas for rising phase
@@ -110,8 +110,8 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
     ahp = 0
     ahp_index = 0
     ahp_array = sweep_y[end_fall_index:ap_end_index]
-    ahp = min(ahp_array)
     ahp_index = np.argmin(ahp_array)
+    ahp = ahp_array[ahp_index]
     ahp_time = sweep_x[ahp_index + end_fall_index]
     fall_delta = ahp - peak_volt
     fall_volt_10 = (fall_delta * .1) + peak_volt

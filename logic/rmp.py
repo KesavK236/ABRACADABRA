@@ -8,7 +8,7 @@ def rmp(file_name, f):
     f.write("Rmp Data:\n")
 
 
-    num_sweeps, sweep_x, sweep_y, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=0, smooth=False)
+    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=0, smooth=False)
 
     resting_potential = sweep_y.mean()
 

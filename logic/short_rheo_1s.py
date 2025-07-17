@@ -6,7 +6,7 @@ from scipy.signal import savgol_filter
 from hampel import hampel
 
 def short_rheo_1s(file_name, f, dvdt, check_threshold):
-    num_sweeps, sweep_x, sweep_y, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name)
+    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name)
 
     print("Rheo_1s Data:")
     f.write(f"Rheo_1s Data:\n")
@@ -21,12 +21,12 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
     passed_check_func = 0
 
     while sweep_index < num_sweeps and not threshold_checked:
-        num_sweeps, sweep_x, sweep_y, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded)
+        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded)
 
         sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=False)
         
         curr_start_index = current_injection_start(sweep_c)
-        ap_max = max(sweep_y)
+        ap_max = sweep_y_raw[np.argmax(sweep_y)]
         dvdt_max = max(sweep_y_d)
 
         if ap_max >= 0 and dvdt_max >= 0:
@@ -42,7 +42,7 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
             while (sweep_y_d[i] < dvdt or sweep_y_d2[i] < 15) and sweep_x[i] < upper_window:
                 i += 1
             threshold_index = i
-            threshold_volt = sweep_y[threshold_index]
+            threshold_volt = sweep_y_raw[threshold_index]
             threshold_time = sweep_x[threshold_index] 
             threshold_curr = sweep_c[curr_start_index + 5]
 
@@ -60,7 +60,15 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
 
     holding_curr = np.mean(sweep_c[curr_start_index-101 : curr_start_index-1])
 
-    steady_state_volt = np.mean(sweep_y[len(sweep_c) - 200 : len(sweep_c)])
+    curr_end_index = curr_start_index + 1
+    length = len(sweep_c)
+    while sweep_c[curr_end_index] != 0:
+        curr_end_index += 1
+        if curr_end_index >= len(sweep_c):
+            break
+    curr_end_index -= 1
+
+    steady_state_volt = np.mean(sweep_y[curr_end_index - 200 : curr_end_index])
 
 
     peak_volt = max(sweep_y)
@@ -111,8 +119,9 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
     ahp = 0
     ahp_index = 0
     ahp_array = sweep_y[end_fall_index:ap_end_index]
-    ahp = min(ahp_array)
+    ahp_array_raw = sweep_y_raw[end_fall_index:ap_end_index]
     ahp_index = np.argmin(ahp_array)
+    ahp = ahp_array_raw[ahp_index]
     ahp_time = sweep_x[ahp_index + end_fall_index]
     fall_delta = ahp - peak_volt
     fall_volt_10 = (fall_delta * .1) + peak_volt
@@ -144,14 +153,16 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
         k += 1
     ahp_halfwidth_end = sweep_x[k]
 
-    rise_time_raw = (peak_time - threshold_time) * 1000
-    rise_time_10_90 = (rise_time_90 - rise_time_10) * 1000
-    fall_time_raw = (ahp_time - peak_time) * 1000
-    fall_time_10_90 = (fall_time_90 - fall_time_10) * 1000
-    halfwidth = (halfwidth_end - halfwidth_start) * 1000
-    ahp_halfwidth = (ahp_halfwidth_start - ahp_halfwidth_end) * 1000
+    rise_time_raw = two_sig_figs((peak_time - threshold_time))
+    rise_time_10_90 = two_sig_figs((rise_time_90 - rise_time_10))
+    fall_time_raw = two_sig_figs((ahp_time - peak_time))
+    fall_time_10_90 = two_sig_figs((fall_time_90 - fall_time_10))
+    halfwidth = two_sig_figs((halfwidth_end - halfwidth_start))
+    ahp_halfwidth = two_sig_figs((ahp_halfwidth_start - ahp_halfwidth_end))
     rheobase = threshold_curr - holding_curr
     curr_start_time = sweep_x[curr_start_index]
+    relative_thresh_time = two_sig_figs((peak_time-curr_start_time))
+    relative_peak_time = two_sig_figs((peak_time-curr_start_time))
 
     # Store values and output
     print(f"Relative Rheobase (nA): {rheobase}")
@@ -163,14 +174,14 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
     print(f"AP Amplitude (mV): {peak_volt - threshold_volt}")
     f.write(f"AP Amplitude (mV):, {peak_volt - threshold_volt}\n")
 
-    print(f"Time of Peak (ms): {(peak_time-curr_start_time) * 1000}")
-    f.write(f"Time of Peak (ms):, {(peak_time-curr_start_time) * 1000}\n")
+    print(f"Time of Peak (ms): {relative_peak_time}")
+    f.write(f"Time of Peak (ms):, {relative_peak_time}\n")
 
     print(f"AP Voltage Threshold (mV): {threshold_volt}")
     f.write(f"AP Voltage Threshold (mV):, {threshold_volt}\n")
 
-    print(f"Time of Threshold (ms): {(threshold_time-curr_start_time) * 1000}")
-    f.write(f"Time of Threshold (ms):, {(threshold_time-curr_start_time) * 10000}\n")
+    print(f"Time of Threshold (ms): {relative_thresh_time}")
+    f.write(f"Time of Threshold (ms):, {relative_thresh_time}\n")
 
     print(f"AP Rise Time Raw (ms): {rise_time_raw}")
     f.write(f"AP Rise Time Raw (ms):, {rise_time_raw}\n")
@@ -210,6 +221,6 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
         folder=os.path.dirname(f.name)
     )
 
-    phase_plane_table = phase_plane(sweep_x, sweep_y, sweep_y_d, f, step="1s")
+    phase_plane_table = phase_plane(sweep_x, sweep_y_raw, sweep_y_d, f, step="1s")
 
     return phase_plane_table

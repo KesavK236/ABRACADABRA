@@ -20,7 +20,7 @@ def ramp_1s(file_name, f, dvdt, verify_threshold):
     loaded = None
 
     for i in range(num_sweep):
-        _, sweep_x, sweep_y, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded)
+        _, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded)
         sweep_y_d, sweep_x_d, _, _ = generate_derivatives(sweep_x, sweep_y)
 
         curr_start_index = current_injection_start(sweep_c)

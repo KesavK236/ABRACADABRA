@@ -23,7 +23,7 @@ def rheo_1s(file_name, f, dvdt):
     loaded = None
 
     for i in range(num_sweep):
-        _, sweep_x, sweep_y, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded)
+        _, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded)
 
         sweep_y_d, sweep_x_d, _, _ = generate_derivatives(sweep_x, sweep_y)
         curr_start_index = current_injection_start(sweep_c)
@@ -67,8 +67,8 @@ def rheo_1s(file_name, f, dvdt):
     if hyper_pol_count > 0:
         input_res = hyper_pol_input_res / 1e6
         omega = chr(0x3a9)
-        print(f"Average Input Resistance (G{omega}): {input_res}")
-        f.write(f"Average Input Resistance (Giga Ohms):, {input_res}\n")
+        print(f"Average Input Resistance (M{omega}): {input_res}")
+        f.write(f"Average Input Resistance (Mega Ohms):, {input_res}\n")
         print(f"Sag Peak (mV): {v_min}")
         f.write(f"Sag Peak (mV):, {v_min}\n")
         print(f"Delta Sag (mV): {delta_sag}")
