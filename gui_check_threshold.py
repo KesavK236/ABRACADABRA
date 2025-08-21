@@ -86,6 +86,8 @@ def sweep_increase(check_threshold_window):
 
 def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep_y, threshold_index, curr_start_index, current_end_index):
     global decision
+    global window_width
+
 
     if check_thresh == False:
         decision = 1
@@ -106,19 +108,23 @@ def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep
     title_label = tk.Label(check_threshold_window, text="Verify the Calculated Threshold", font=('Verdana', 16))
     title_label.grid(column=0, columnspan=6, row=0)
 
+    pil_images = []
+    photo_images = []
+    image_labels = []
+
     standard_img, derivative_img = make_scaled_plots(sweep_x, sweep_y, curr_start_index, current_end_index, threshold_index)
 
-    pil_stand = Image.open(standard_img)
-    resize_stand = pil_stand.resize((480, 360), Image.LANCZOS)
-    photo_stand = ImageTk.PhotoImage(resize_stand)
-    stand_label = tk.Label(check_threshold_window, image=photo_stand)
-    stand_label.grid(column=0, columnspan=3, row=1)
+    pil_images.append(Image.open(standard_img))
+    resize_stand = pil_images[0].resize((480, 360), Image.LANCZOS)
+    photo_images.append(ImageTk.PhotoImage(resize_stand))
+    image_labels.append(tk.Label(check_threshold_window, image=photo_images[0]))
+    image_labels[0].grid(column=0, columnspan=3, row=1)
 
-    pil_deriv = Image.open(derivative_img)
-    resize_deriv = pil_deriv.resize((480, 360), Image.LANCZOS)
-    photo_deriv = ImageTk.PhotoImage(resize_deriv)
-    deriv_label = tk.Label(check_threshold_window, image=photo_deriv)
-    deriv_label.grid(column=3, columnspan=3, row=1)
+    pil_images.append(Image.open(derivative_img))
+    resize_deriv = pil_images[1].resize((480, 360), Image.LANCZOS)
+    photo_images.append(ImageTk.PhotoImage(resize_deriv))
+    image_labels.append(tk.Label(check_threshold_window, image=photo_images[1]))
+    image_labels[1].grid(column=3, columnspan=3, row=1)
 
     # windowed search
     window_upper_limit_label = tk.Label(check_threshold_window, text="Upper Bound(sec):", font=('Verdana', 12))
@@ -150,12 +156,31 @@ def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep
     button_sweep_increase.grid(column=4, columnspan=2, row=4, sticky='s')
 
 
+    def on_resize(event):
+        global window_width
+
+        if check_threshold_window.winfo_width() != window_width:
+            window_width = check_threshold_window.winfo_width()
+            new_width = window_width // 2  # or some other logic
+            new_height = int(new_width * 0.75)
+
+            if new_width <= 0 or new_height <= 0:
+                return  # ignore resize events with invalid size
+
+            for i in range(2):
+                resized = pil_images[i].resize((new_width, new_height), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(resized)
+                photo_images[i] = photo
+                image_labels[i].config(image=photo)
+
+
+
     def on_closing():
         global decision
         decision = 0
         check_threshold_window.destroy()
 
-
+    check_threshold_window.bind("<Configure>", on_resize)
     check_threshold_window.protocol("WM_DELETE_WINDOW", on_closing)
 
     check_threshold_window.grab_set()

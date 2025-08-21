@@ -1,5 +1,5 @@
 import os
-from logic.helpers import load_abf, num_sweeps, current_injection_start, ap_curr_and_time, two_sig_figs, no_spaces, save_plot, generate_derivatives, is_ramp
+from logic.helpers import load_abf, num_sweeps, current_injection_start, ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives, is_ramp
 import numpy as np
 from scipy.signal import savgol_filter
 
@@ -11,8 +11,6 @@ def rheo_1s(file_name, f, dvdt):
     f.write("Rheo_1s Data:\n")
 
     num_sweep = load_abf(file_name)[0]
-    hyper_pol_input_res = 0
-    hyper_pol_count = 0
     delta_sag = 0
     sag_ratio = 0
     ap_bool = 0
@@ -21,6 +19,7 @@ def rheo_1s(file_name, f, dvdt):
     ap_delay = 0
     image_made_bool = 0
     loaded = None
+    hyper_pol_input_res_array = []
 
     for i in range(num_sweep):
         _, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded)
@@ -40,12 +39,12 @@ def rheo_1s(file_name, f, dvdt):
             end_volt = np.mean(sweep_y[curr_end_index - 200:curr_end_index])
             end_curr = np.mean(sweep_c[curr_end_index - 200:curr_end_index])
 
-            if hyper_pol_count < 1:
+            if len(hyper_pol_input_res_array) < 1:
                 delta_sag = v_min - end_volt
                 sag_ratio = delta_sag / (v_min - base_volt)
-                hyper_pol_input_res += ((end_volt - base_volt) * 1e-3) / (end_curr * 1e-12)
+            
+            hyper_pol_input_res_array.append(((end_volt - base_volt) * 1e-3) / (end_curr * 1e-12))
 
-            hyper_pol_count += 1
 
         ap_max = np.max(sweep_y)
         if sweep_c[curr_start_index + 1] > 0 and ap_bool == 0 and ap_max > 0:
@@ -64,11 +63,14 @@ def rheo_1s(file_name, f, dvdt):
             )
             image_made_bool = 1
 
-    if hyper_pol_count > 0:
-        input_res = hyper_pol_input_res / 1e6
+    if len(hyper_pol_input_res_array) > 0:
         omega = chr(0x3a9)
-        print(f"Average Input Resistance (M{omega}): {input_res}")
-        f.write(f"Average Input Resistance (Mega Ohms):, {input_res}\n")
+        for i in range(hyper_pol_input_res_array):
+            print(f"Input Resistance of Sweep {i} (M{omega}): {hyper_pol_input_res_array[i]}")
+            f.write(f"Input Resistance of Sweep {i} (Mega Ohms):, {hyper_pol_input_res_array[i]}\n")
+        average_input_res = np.mean(hyper_pol_input_res_array)
+        print(f"Average Input Resistance (M{omega}): {average_input_res}")
+        f.write(f"Average Input Resistance (Mega Ohms):, {average_input_res}\n")
         print(f"Sag Peak (mV): {v_min}")
         f.write(f"Sag Peak (mV):, {v_min}\n")
         print(f"Delta Sag (mV): {delta_sag}")
@@ -79,6 +81,8 @@ def rheo_1s(file_name, f, dvdt):
     if ap_bool == 1:
         print(f"Rheobase (nA): {rheobase}")
         f.write(f"Rheobase (nA):, {rheobase}\n")
-        ap_delay = two_sig_figs(ap_delay)
+        ap_delay = adjust_units(ap_delay)
         print(f"Time to Spike (ms): {ap_delay}")
         f.write(f"Time to Spike (ms):, {ap_delay}\n")
+    
+    

@@ -19,7 +19,9 @@ An application that uses a Python script to automate data extraction of electrop
 * If you want to analyze only one protocol, select the file for the desired protocol.
 * You can remove a file from the analysis list by clicking the "Clear File" button to the left of the unwanted protocol.
 * The default dV/dt for the analyzer is 5 mV/ms. This can be changed to any integer between 1 and 100 using the scroll box or by typing it.
-* Once you do this for your desired protocols, name the output folders in the text entry at the bottom. 
+* Once you do this for your desired protocols, name the output folders in the text entry at the bottom.
+* If unsure if the program is counting action potentials correctly in the 4x protocols, you can visually verify the counts by selecting the "Verify AP Counts?" check box.
+    * When the program has calculated the AP counts, it will display a window with the 4 traces and the associated counts. Underneath, you can select input the visually verified number of APs in the trace. Press the "Verified!" button for the program to continue. If the displayed graphs are too small, you can increase the size of the window to increase the size of the graphs.
 * If unsure if the program is calculating the correct threshold voltage, you can manually check the threshold value by selecting the "Verify Threshold Value?" check box
     * This button will open up 2 windows. One is a graph of the selected sweep with a green dot marking the selected threshold value. The other is a window that controls whether to change the threshold value. You can select a specific time window to check for a threshold voltage. If the selected sweep does not appear to have an action potential, you can look at the next sweep. If the threshold appears correct, you can press the "Threshold is Correct!" button.
 * You can then click the "enter" button to run the program

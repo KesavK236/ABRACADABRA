@@ -74,6 +74,9 @@ def ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start
     j = curr_start_index
     resting_current = sweep_c[j-10]
     ap_bool = 0
+    current_threshold = 0
+    rheobase = 0
+    ap_delay = 0
     threshold_dvdt = int(dvdt)
     # maybe need to add a extra check to ensure this is an action potential
     while j < len(sweep_c) - 1 and ap_bool == 0:
@@ -84,18 +87,19 @@ def ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start
             ap_delay = sweep_x_d[j] - sweep_x[curr_start_index]
 
         j += 1
+
     return ap_bool, current_threshold, rheobase, ap_delay
 
-def two_sig_figs(num):
-    count = 0
-    while abs(num) < 10:
-        num *= 10
-        count += 1
-    round_check = int(num * 10) % 10
-    if round_check > 5:
-        num += 1
-    count -= 3
-    return int(num) / (10 ** count)
+def get_max(sweep_x, sweep_y, max_index, sampling_rate, delta=0.00001):
+    lower_bound_index = int((sweep_x[max_index] - delta) * sampling_rate)
+    upper_bound_index = int((sweep_x[max_index] + delta) * sampling_rate)
+    max_array = sweep_y[lower_bound_index:upper_bound_index]
+    peak = np.mean(max_array)
+    return peak
+
+def adjust_units(num, figs = 3):
+    num = num * 1000
+    return round(num, figs)
 
 def no_spaces(name):
     return name.replace(' ', '_')

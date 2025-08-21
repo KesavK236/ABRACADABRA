@@ -2,7 +2,7 @@ import os
 import numpy as np
 from logic.helpers import (
     load_abf, generate_derivatives, current_injection_start,
-    ap_curr_and_time, two_sig_figs, no_spaces, save_plot
+    ap_curr_and_time, adjust_units, no_spaces, save_plot
 )
 
 from gui_ap_verify import ap_count_window

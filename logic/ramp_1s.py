@@ -2,7 +2,7 @@ import os
 import numpy as np
 from logic.helpers import (
     load_abf, num_sweeps, current_injection_start, 
-    ap_curr_and_time, two_sig_figs, no_spaces, save_plot, generate_derivatives
+    ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives
 )
 
 def ramp_1s(file_name, f, dvdt, verify_threshold):
@@ -46,6 +46,6 @@ def ramp_1s(file_name, f, dvdt, verify_threshold):
     
         print(f"Rheobase (nA): {rheobase}")
         f.write(f"Rheobase (nA):, {rheobase}\n")
-        ap_delay = two_sig_figs(ap_delay)
+        ap_delay = adjust_units(ap_delay)
         print(f"Time to Spike (ms): {ap_delay}")
         f.write(f"Time to Spike (ms):, {ap_delay}\n")

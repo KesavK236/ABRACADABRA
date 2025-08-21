@@ -1,8 +1,8 @@
 import os
 from gui_check_threshold import check_thresh_window
-from logic.helpers import load_abf, num_sweeps, current_injection_start, ap_curr_and_time, two_sig_figs, no_spaces, save_plot, generate_derivatives, is_ramp, phase_plane
+from logic.helpers import load_abf, num_sweeps, current_injection_start, ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives, is_ramp, phase_plane, get_max
 import numpy as np
-from scipy.signal import savgol_filter
+from scipy.signal import find_peaks
 from hampel import hampel
 
 def short_rheo_1s(file_name, f, dvdt, check_threshold):
@@ -26,13 +26,17 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
         sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=False)
         
         curr_start_index = current_injection_start(sweep_c)
-        ap_max = sweep_y_raw[np.argmax(sweep_y)]
-        dvdt_max = max(sweep_y_d)
+        current = sweep_c[curr_start_index + 5]
+        
+        sweep_y_post_curr = sweep_y_raw[curr_start_index:]
+        sweep_y_d_post_curr = sweep_y_d[curr_start_index:]
+        ap_max = max(sweep_y_post_curr)
+        dvdt_max = max(sweep_y_d_post_curr)
 
-        if ap_max >= 0 and dvdt_max >= 0:
+        if ap_max >= 0 and dvdt_max >= 0 and current > 0:
             if passed_check_func == 0:
                 upper_window = sweep_x[np.argmax(sweep_y_d)]
-                lower_window = sweep_x[curr_start_index]
+                lower_window = sweep_x[curr_start_index + int(0.002 * sample_rate)]
 
             i = int(lower_window * sample_rate)
             
@@ -70,9 +74,10 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
 
     steady_state_volt = np.mean(sweep_y[curr_end_index - 200 : curr_end_index])
 
-
-    peak_volt = max(sweep_y)
-    peak_index = np.argmax(sweep_y)
+    peaks = find_peaks(sweep_y_post_curr, 0)
+    peak_index = peaks[0][0] + curr_start_index
+    peak_volt = sweep_y[peak_index]
+    filtered_peak_volt = get_max(sweep_x, sweep_y, peak_index, sample_rate)
     peak_time = sweep_x[peak_index]
 
     # Find the deltas for rising phase
@@ -114,6 +119,8 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
     else:
         while sweep_y_d[l] > 0:
             l += 1
+            thing = sweep_x_d[l] * 1000
+            thing
         ap_end_index = l
 
     ahp = 0
@@ -153,34 +160,37 @@ def short_rheo_1s(file_name, f, dvdt, check_threshold):
         k += 1
     ahp_halfwidth_end = sweep_x[k]
 
-    rise_time_raw = two_sig_figs((peak_time - threshold_time))
-    rise_time_10_90 = two_sig_figs((rise_time_90 - rise_time_10))
-    fall_time_raw = two_sig_figs((ahp_time - peak_time))
-    fall_time_10_90 = two_sig_figs((fall_time_90 - fall_time_10))
-    halfwidth = two_sig_figs((halfwidth_end - halfwidth_start))
-    ahp_halfwidth = two_sig_figs((ahp_halfwidth_start - ahp_halfwidth_end))
+    rise_time_raw = adjust_units((peak_time - threshold_time))
+    rise_time_10_90 = adjust_units((rise_time_90 - rise_time_10))
+    fall_time_raw = adjust_units((ahp_time - peak_time))
+    fall_time_10_90 = adjust_units((fall_time_90 - fall_time_10))
+    halfwidth = adjust_units((halfwidth_end - halfwidth_start))
+    ahp_halfwidth = adjust_units((ahp_halfwidth_start - ahp_halfwidth_end))
     rheobase = threshold_curr - holding_curr
     curr_start_time = sweep_x[curr_start_index]
-    relative_thresh_time = two_sig_figs((peak_time-curr_start_time))
-    relative_peak_time = two_sig_figs((peak_time-curr_start_time))
+    relative_thresh_time = adjust_units((threshold_time-curr_start_time))
+    relative_peak_time = adjust_units((peak_time-curr_start_time))
 
     # Store values and output
     print(f"Relative Rheobase (nA): {rheobase}")
+    print(f"Current start time: {curr_start_time}")
     f.write(f"Relative Rheobase (nA):, {rheobase}\n")
 
-    print(f"AP Peak (mV): {peak_volt}")
-    f.write(f"AP Peak (mV):, {peak_volt}\n")
+    print(f"AP Peak (mV): {filtered_peak_volt}")
+    f.write(f"AP Peak (mV):, {filtered_peak_volt}\n")
 
-    print(f"AP Amplitude (mV): {peak_volt - threshold_volt}")
-    f.write(f"AP Amplitude (mV):, {peak_volt - threshold_volt}\n")
+    print(f"AP Amplitude (mV): {filtered_peak_volt - threshold_volt}")
+    f.write(f"AP Amplitude (mV):, {filtered_peak_volt - threshold_volt}\n")
 
     print(f"Time of Peak (ms): {relative_peak_time}")
+    print(f"Raw Peak Time: {peak_time}")
     f.write(f"Time of Peak (ms):, {relative_peak_time}\n")
 
     print(f"AP Voltage Threshold (mV): {threshold_volt}")
     f.write(f"AP Voltage Threshold (mV):, {threshold_volt}\n")
 
     print(f"Time of Threshold (ms): {relative_thresh_time}")
+    print(f"Raw Thresh Time: {threshold_time}")
     f.write(f"Time of Threshold (ms):, {relative_thresh_time}\n")
 
     print(f"AP Rise Time Raw (ms): {rise_time_raw}")

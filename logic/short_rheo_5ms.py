@@ -1,8 +1,8 @@
 import os
 from gui_check_threshold import check_thresh_window
-from logic.helpers import load_abf, num_sweeps, current_injection_start, ap_curr_and_time, two_sig_figs, no_spaces, save_plot, generate_derivatives, is_ramp, phase_plane
+from logic.helpers import load_abf, num_sweeps, current_injection_start, ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives, is_ramp, phase_plane
 import numpy as np
-from scipy.signal import savgol_filter
+from scipy.signal import savgol_filter, find_peaks
 from hampel import hampel
 
 def short_rheo_5ms(file_name, f, dvdt, check_threshold):
@@ -26,13 +26,15 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
         sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=False)
         
         curr_start_index = current_injection_start(sweep_c)
-        ap_max = max(sweep_y)
-        dvdt_max = max(sweep_y_d)
+        sweep_y_post_curr = sweep_y_raw[curr_start_index:]
+        sweep_y_d_post_curr = sweep_y_d[curr_start_index:]
+        ap_max = max(sweep_y_post_curr)
+        dvdt_max = max(sweep_y_d_post_curr)
 
         if ap_max >= 0:
             if passed_check_func == 0:
                 upper_window = sweep_x[np.argmax(sweep_y_d)]
-                lower_window = sweep_x[curr_start_index]
+                lower_window = sweep_x[curr_start_index + int(0.002 * sample_rate)]
 
             i = int(upper_window * sample_rate)
             
@@ -62,9 +64,10 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
     steady_state_volt = np.mean(sweep_y[len(sweep_c) - 200 : len(sweep_c)])
 
 
-    peak_index = np.argmax(sweep_y)
-    peak_volt = sweep_y_raw[peak_index]
-    peak_time = sweep_x[peak_index]
+    peaks = find_peaks(sweep_y_post_curr, 0)
+    peak_index = peaks[0][0]
+    peak_volt = sweep_y[peak_index + curr_start_index]
+    peak_time = sweep_x[peak_index + curr_start_index]
 
     # Find the deltas for rising phase
     halfwidth_volt = (peak_volt + threshold_volt) / 2
@@ -154,12 +157,12 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
     # Format values
     peak_time *= 1000
     threshold_time *= 1000
-    rise_time_raw = two_sig_figs(rise_time_raw)
-    rise_time_10_90 = two_sig_figs(rise_time_10_90)
-    halfwidth = two_sig_figs(halfwidth)
-    fall_time_raw = two_sig_figs(fall_time_raw)
-    fall_time_10_90 = two_sig_figs(fall_time_10_90)
-    ahp_halfwidth = two_sig_figs(ahp_halfwidth)
+    rise_time_raw = adjust_units(rise_time_raw)
+    rise_time_10_90 = adjust_units(rise_time_10_90)
+    halfwidth = adjust_units(halfwidth)
+    fall_time_raw = adjust_units(fall_time_raw)
+    fall_time_10_90 = adjust_units(fall_time_10_90)
+    ahp_halfwidth = adjust_units(ahp_halfwidth)
 
     # Store values and output
     print(f"Relative Rheobase (nA): {rheobase}")

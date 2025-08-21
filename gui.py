@@ -33,9 +33,11 @@ def launch_gui(root):
                 verify_threshold=check_threshold.get(),
                 verify_ap_counts=check_ap_counts.get(),
                 open_excel = open_excel.get(),
-                open_phase = open_phase.get()
+                open_phase = open_phase.get(),
+                status_label= status_label,
+                root= root
             )
-            status_label.config(text="Analysis complete.", fg="green")
+            
         except Exception as e:
             status_label.config(text=f"Error: {str(e)}", fg="red")
         finally:
