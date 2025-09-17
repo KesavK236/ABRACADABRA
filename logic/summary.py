@@ -77,7 +77,7 @@ def callback(file_paths, output_name, dvdt, verify_threshold = False, verify_ap_
         except:
             error_msg = "error in Single AP 5ms file"
 
-    version = 2.1
+    version = 1.0
 
     print(f"ABRACADABRA Version: {version}")
     output_df["ABRACADABRA Version"] = version

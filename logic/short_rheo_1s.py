@@ -3,7 +3,7 @@ from gui_check_threshold import check_thresh_window
 from logic.helpers import load_abf, current_injection_points_rheo, ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives, is_ramp, phase_plane, get_max
 import numpy as np
 from scipy.signal import find_peaks
-from hampel import hampel
+
 
 def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd()):
     num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name)

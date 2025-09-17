@@ -3,6 +3,8 @@ from gui import launch_gui
 import sys
 import os
 
+# pyinstaller --clean --onefile --noconsole --icon=assets/ABRACADABRA.ico --hidden-import=hampel  main.py
+
 # Gets the relative paths for the output files
 def resource_path(relative_path):
     try:

@@ -15,6 +15,11 @@ def resource_path(relative_path):
 
 
 def make_scaled_plots(sweep_x, sweep_y, curr_start_index, current_end_index, threshold_index):
+    directory = "imageram"
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
     max_index = np.argmax(sweep_y)
     truncated_y = sweep_y[max_index:current_end_index]
     min_index = np.argmin(truncated_y) + max_index
