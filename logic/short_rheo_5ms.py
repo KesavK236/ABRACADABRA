@@ -1,18 +1,18 @@
 import os
 from gui_check_threshold import check_thresh_window
-from logic.helpers import load_abf, num_sweeps, current_injection_start, ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives, is_ramp, phase_plane
+from logic.helpers import load_abf, current_injection_points_rheo, ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives, is_ramp, phase_plane, get_max
 import numpy as np
 from scipy.signal import savgol_filter, find_peaks
 from hampel import hampel
 
-def short_rheo_5ms(file_name, f, dvdt, check_threshold):
-    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name)
+def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd()):
+    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name)
 
     print("Rheo_5ms Data:")
-    f.write(f"Rheo_5ms Data:\n")
+    # f.write(f"Rheo_5ms Data:\n")
 
 
-    curr_start_index = current_injection_start(sweep_c)
+    curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c)
    
 
     
@@ -21,11 +21,11 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
     passed_check_func = 0
 
     while sweep_index < num_sweeps and not threshold_checked:
-        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded)
+        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded)
 
         sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=False)
         
-        curr_start_index = current_injection_start(sweep_c)
+        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c)
         sweep_y_post_curr = sweep_y_raw[curr_start_index:]
         sweep_y_d_post_curr = sweep_y_d[curr_start_index:]
         ap_max = max(sweep_y_post_curr)
@@ -45,7 +45,6 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
             threshold_index = i
             threshold_volt = sweep_y_raw[threshold_index]
             threshold_time = sweep_x[threshold_index] 
-            threshold_curr = sweep_c[curr_start_index + 5]
 
            
             threshold_checked, upper_window, lower_window = check_thresh_window(check_threshold, upper_window, lower_window, sweep_x, sweep_y, threshold_index, curr_start_index, len(sweep_c) - 100)
@@ -65,9 +64,10 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
 
 
     peaks = find_peaks(sweep_y_post_curr, 0)
-    peak_index = peaks[0][0]
-    peak_volt = sweep_y[peak_index + curr_start_index]
-    peak_time = sweep_x[peak_index + curr_start_index]
+    peak_index = peaks[0][0] + curr_start_index
+    peak_volt = sweep_y[peak_index]
+    filtered_peak_volt = get_max(sweep_x, sweep_y, peak_index, sample_rate)
+    peak_time = sweep_x[peak_index]
 
     # Find the deltas for rising phase
     halfwidth_volt = (peak_volt + threshold_volt) / 2
@@ -152,65 +152,79 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
     fall_time_10_90 = fall_time_90 - fall_time_10
     halfwidth = halfwidth_end - halfwidth_start
     ahp_halfwidth = ahp_halfwidth_start - ahp_halfwidth_end
-    rheobase = threshold_curr - holding_curr
+    rheobase = stim_curr - holding_curr
 
     # Format values
-    peak_time *= 1000
-    threshold_time *= 1000
     rise_time_raw = adjust_units(rise_time_raw)
     rise_time_10_90 = adjust_units(rise_time_10_90)
     halfwidth = adjust_units(halfwidth)
     fall_time_raw = adjust_units(fall_time_raw)
     fall_time_10_90 = adjust_units(fall_time_10_90)
     ahp_halfwidth = adjust_units(ahp_halfwidth)
+    curr_start_time = sweep_x[curr_start_index]
+    relative_thresh_time = adjust_units((threshold_time-curr_start_time))
+    relative_peak_time = adjust_units((peak_time-curr_start_time))
 
     # Store values and output
-    print(f"Relative Rheobase (nA): {rheobase}")
-    f.write(f"Relative Rheobase (nA):, {rheobase}\n")
+    if "(nA)" in c_label:
+        current_units = "nA"
+    elif "(pA)" in c_label:
+        current_units = "pA"
+    print(f"Holding Current ({current_units}): {holding_curr}")
+    df[f"Holding Current 1s ({current_units})"] = holding_curr
 
-    print(f"AP Peak (mV): {peak_volt}")
-    f.write(f"AP Peak (mV):, {peak_volt}\n")
+    print(f"Rheobase ({current_units}): {stim_curr}")
+    df[f"Rheobase 1s ({current_units})"] = stim_curr
 
-    print(f"AP Amplitude (mV): {peak_volt - threshold_volt}")
-    f.write(f"AP Amplitude (mV):, {peak_volt - threshold_volt}\n")
+    print(f"Relative Rheobase ({current_units}): {rheobase}")
+    df[f"Relative Rheobase 1s ({current_units})"] = rheobase
+    print(f"Current start time: {curr_start_time}")
 
-    print(f"Time of Peak (ms): {peak_time}")
-    f.write(f"Time of Peak (ms):, {peak_time}\n")
+    print(f"AP Peak (mV): {filtered_peak_volt}")
+    df["AP Peak 5ms (mV)"] = filtered_peak_volt
+
+    print(f"AP Amplitude (mV): {filtered_peak_volt - threshold_volt}")
+    df["AP Amplitude 5ms (mV)"] = filtered_peak_volt - threshold_volt
+
+    print(f"Time of Peak (ms): {relative_peak_time}")
+    print(f"Raw Peak Time: {peak_time}")
+    df["Time of Peak 5ms (ms)"] = relative_peak_time
 
     print(f"AP Voltage Threshold (mV): {threshold_volt}")
-    f.write(f"AP Voltage Threshold (mV):, {threshold_volt}\n")
+    df["AP Voltage Threshold 5ms (mV)"] = threshold_volt
 
-    print(f"Time of Threshold (ms): {threshold_time}")
-    f.write(f"Time of Threshold (ms):, {threshold_time}\n")
+    print(f"Time of Threshold (ms): {relative_thresh_time}")
+    print(f"Raw Thresh Time: {threshold_time}")
+    df["Time of Threshold 5ms (ms)"] =  relative_thresh_time
 
     print(f"AP Rise Time Raw (ms): {rise_time_raw}")
-    f.write(f"AP Rise Time Raw (ms):, {rise_time_raw}\n")
+    df["AP Rise Time Raw 5ms (ms)"] = rise_time_raw
 
     print(f"AP Rise Time 10-90 (ms): {rise_time_10_90}")
-    f.write(f"AP Rise Time 10-90 (ms):, {rise_time_10_90}\n")
+    df["AP Rise Time 10-90 5ms (ms)"]  = rise_time_10_90
 
     print(f"AP Halfwidth (ms): {halfwidth}")
-    f.write(f"AP Halfwidth (ms):, {halfwidth}\n")
+    df["AP Halfwidth 5ms (ms)"] = halfwidth
 
     print(f"AP Falling Time Raw (ms): {fall_time_raw}")
-    f.write(f"AP Falling Time Raw (ms):, {fall_time_raw}\n")
+    df["AP Falling Time Raw 5ms (ms)"] = fall_time_raw
 
     print(f"AP Falling Time 10-90 (ms): {fall_time_10_90}")
-    f.write(f"AP Falling Time 10-90 (ms):, {fall_time_10_90}\n")
+    df["AP Falling Time 10-90 5ms (ms)"] = fall_time_10_90
 
     print(f"AHP Minimum (mV): {ahp}")
-    f.write(f"AHP Minimum (mV):, {ahp}\n")
+    df["AHP Minimum 5ms (mV)"] = ahp
 
     print(f"AHP Relative (mV): {ahp - threshold_volt}")
-    f.write(f"AHP Relative (mV):, {ahp - threshold_volt}\n")
+    df["AHP Relative 5ms (mV)"] = ahp - threshold_volt
 
     print(f"AHP half-width (ms): {ahp_halfwidth}")
-    f.write(f"AHP half-width (ms):, {ahp_halfwidth}\n")
+    df["AHP half-width 5ms (ms)"] = ahp_halfwidth
 
     print(f"Upstroke-Downstroke ratio: {rise_time_10_90 / fall_time_10_90}")
-    f.write(f"Upstroke-Downstroke ratio:, {rise_time_10_90 / fall_time_10_90}\n")
+    df["Upstroke-Downstroke ratio 5ms"] = rise_time_10_90 / fall_time_10_90
 
-    image_name = no_spaces(f.name[:-4]) + "_rheo_5ms_graph.png"
+    image_name = no_spaces(df.index[0]) + "_rheo_5ms_graph.png"
     save_plot(
         x=sweep_x,
         y= sweep_y,
@@ -218,9 +232,9 @@ def short_rheo_5ms(file_name, f, dvdt, check_threshold):
         ylabel= y_label,
         title= os.path.basename(image_name)[:-4],
         filename=image_name,
-        folder=os.path.dirname(f.name)
+        folder=output_dir
     )
 
-    phase_plane_table = phase_plane(sweep_x, sweep_y, sweep_y_d, f, step="5ms")
+    phase_plane_table = phase_plane(sweep_x, sweep_y, sweep_y_d, df, step="5ms", output_dir=output_dir)
 
-    return phase_plane_table
+    return df, phase_plane_table

@@ -1,21 +1,22 @@
 import os
 from logic.helpers import load_abf, no_spaces, save_plot
+import pandas as pd
 
-def rmp(file_name, f):
+def rmp(file_name, df, output_dir=os.getcwd()):
 
     # Priming output
     print("Rmp Data:")
-    f.write("Rmp Data:\n")
+    # f.write("Rmp Data:\n")
 
 
-    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=0, smooth=False)
+    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=0, smooth=False)
 
     resting_potential = sweep_y.mean()
 
     print(f"Resting Membrane Potential (mV): {resting_potential}")
-    f.write(f"Resting Membrane Potential (mV):, {resting_potential}\n")
+    df["Resting Membrane Potential (mV)"] = resting_potential
 
-    image_name = no_spaces(f.name[:-4]) + '_rmp_graph.png'
+    image_name = no_spaces(df.index[0]) + '_rmp_graph.png'
     image_path = save_plot(
         x=sweep_x,
         y=sweep_y,
@@ -23,5 +24,8 @@ def rmp(file_name, f):
         ylabel=y_label,
         title=os.path.basename(image_name)[:-4],
         filename=image_name,
-        folder=os.path.dirname(f.name)
+        folder=output_dir
     )
+
+    print(df)
+    return df

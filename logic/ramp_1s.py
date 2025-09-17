@@ -1,14 +1,14 @@
 import os
 import numpy as np
 from logic.helpers import (
-    load_abf, num_sweeps, current_injection_start, 
+    load_abf, num_sweeps, current_injection_points_ramp, 
     ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives
 )
 
-def ramp_1s(file_name, f, dvdt, verify_threshold):
+def ramp_1s(file_name, df, dvdt=20, verify_threshold=False, output_dir=os.getcwd()):
 
     print("Ramp_1s Data:")
-    f.write("Ramp_1s Data:\n")
+    # f.write("Ramp_1s Data:\n")
 
     num_sweep = load_abf(file_name)[0]
 
@@ -20,17 +20,21 @@ def ramp_1s(file_name, f, dvdt, verify_threshold):
     loaded = None
 
     for i in range(num_sweep):
-        _, sweep_x, sweep_y, sweep_y_raw, sweep_c, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded)
+        _, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim,  x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded)
         sweep_y_d, sweep_x_d, _, _ = generate_derivatives(sweep_x, sweep_y)
 
-        curr_start_index = current_injection_start(sweep_c)
+        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_ramp(loaded, sample_rate, i, sweep_x, sweep_c, sweep_stim)
 
         ap_max = max(sweep_y)
-        if sweep_c[curr_start_index + 100] > 0 and ap_bool == 0 and ap_max > 0:
-            ap_bool, current_threshold, rheobase, ap_delay = ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index, dvdt)
+        if ap_bool == 0 and ap_max > 0:
+            if "(nA)" in c_label:
+                current_units = "nA"
+            elif "(pA)" in c_label:
+                current_units = "pA"
+            ap_bool, current_threshold, rheobase, ap_delay = ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index, curr_end_index, dvdt)
         
         if ap_bool == 1 and not image_made:
-            image_name = no_spaces(f.name[:-4]) + f"_ramp_1s_graph.png"
+            image_name = no_spaces(df.index[0]) + f"_ramp_1s_graph.png"
             save_plot(
                 x=sweep_x,
                 y=sweep_y,
@@ -38,14 +42,16 @@ def ramp_1s(file_name, f, dvdt, verify_threshold):
                 ylabel=y_label,
                 title=os.path.basename(image_name)[:-4],
                 filename=image_name,
-                folder=os.path.dirname(f.name)
+                folder=output_dir
             )
             image_made = True
 
     if ap_bool:
     
-        print(f"Rheobase (nA): {rheobase}")
-        f.write(f"Rheobase (nA):, {rheobase}\n")
+        print(f"Rheobase ({current_units}): {rheobase}")
+        df[f"Rheobase Ramp ({current_units})"] = rheobase
         ap_delay = adjust_units(ap_delay)
         print(f"Time to Spike (ms): {ap_delay}")
-        f.write(f"Time to Spike (ms):, {ap_delay}\n")
+        df["Time to Spike Ramp (ms)"] = ap_delay
+
+    return df

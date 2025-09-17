@@ -3,7 +3,7 @@ from tkinter.filedialog import askopenfilename
 import sys
 from logic.summary import callback
 
-filenames = ["No File Chosen"] * 7
+filenames = ["No File Chosen"] * 6
 
 def launch_gui(root):
     def make_file_change_handler(index):
@@ -54,9 +54,9 @@ def launch_gui(root):
     label_title.grid(row=0, column=0, columnspan=6, pady=10, sticky='n')
 
     # File input labels and buttons
-    protocols = ["RMP", "Rheo 1s", "Rheo 4x", "Ramp 1s", "Ramp 4x", "Rheo 5ms Single AP", "Rheo 1s Single AP"]
+    protocols = ["RMP", "Rheo 1s", "Rheo 4x", "Ramp 1s", "Ramp 4x", "Rheo 5ms Single AP"]
     file_labels = []
-    for i in range(7):
+    for i in range(6):
         button_clear = tk.Button(root, text="Clear File", font=("Verdana", 12), bg="grey", fg="black", command=make_file_clear_handler(i))
         button_clear.grid(row=i+1, column=0, padx=15, sticky='w')
 
