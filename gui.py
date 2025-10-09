@@ -24,7 +24,13 @@ def launch_gui(root):
     def on_enter():
         run_button.config(state="disabled")
         status_label.config(text="Running analysis...", fg="blue")
+        for i in range(6):
+            error_labels[i].config(text="")
         root.update_idletasks()
+        print(root.geometry())
+        for c in range(5):
+            x, y, width, height = root.grid_bbox(c, 3)  # col=c, row=3
+            print(f"Row 3, Column {c} width:", width)
         try:
             callback(
                 file_paths=filenames,
@@ -35,6 +41,7 @@ def launch_gui(root):
                 open_excel = open_excel.get(),
                 open_phase = open_phase.get(),
                 status_label= status_label,
+                error_labels= error_labels,
                 root= root
             )
             
@@ -51,28 +58,33 @@ def launch_gui(root):
     
     # Title
     label_title = tk.Label(root, text="ABRACADABRA", font=("Verdana", 20))
-    label_title.grid(row=0, column=0, columnspan=6, pady=10, sticky='n')
+    label_title.grid(row=0, column=0, columnspan=5, pady=10, sticky='n')
 
     # File input labels and buttons
-    protocols = ["RMP", "Rheo 1s", "Rheo 4x", "Ramp 1s", "Ramp 4x", "Rheo 5ms Single AP"]
+    protocols = ["RMP", "Rheo 1s", "Rheo 4x", "Ramp 1s", "Ramp 4x", "Rheo 5ms"]
     file_labels = []
+    error_labels = []
     for i in range(6):
         button_clear = tk.Button(root, text="Clear File", font=("Verdana", 12), bg="grey", fg="black", command=make_file_clear_handler(i))
         button_clear.grid(row=i+1, column=0, padx=15, sticky='w')
 
         label_text = protocols[i]
         label = tk.Label(root, text=label_text, font=("Verdana", 12))
-        label.grid(row=i+1, column=1, sticky='e')
+        label.grid(row=i+1, column=1, padx=(214, 6), sticky='e')
 
         spacer = tk.Label(root, text=" ")  # empty column to center the gap
         spacer.grid(row=i+1, column=2, padx=0, pady=10)
 
         button_change = tk.Button(root, text="Change File", font=("Verdana", 12), bg="grey", fg="black", command=make_file_change_handler(i))
-        button_change.grid(row=i+1, column=3, padx=5, sticky='w')
+        button_change.grid(row=i+1, column=3, padx=5, sticky='n')
 
         file_label = tk.Label(root, text="No File Chosen", font=("Verdana", 12), anchor="w", width=30)
-        file_label.grid(row=i+1, column=4)
+        file_label.grid(row=i+1, column=4, sticky='w', padx=15)
         file_labels.append(file_label)
+
+        error_label = tk.Label(root, text="", font=("Verdana", 12), anchor="w", fg="red")
+        error_label.grid(row=i+1, column=5, padx=15)
+        error_labels.append(error_label)
 
     # Spinbox and checkbuttons
     dvdt_label = tk.Label(root, text="Threshold dV/dt (mV/ms):", font=("Verdana", 12))
@@ -100,24 +112,24 @@ def launch_gui(root):
 
     # Output Stuff
     output_label = tk.Label(root, text="Output File Name", font=("Verdana", 14))
-    output_label.grid(row=13, column=0, columnspan=6, sticky='s')
+    output_label.grid(row=13, column=0, columnspan=5, sticky='s')
     output_filename = tk.StringVar()
     output_entry = tk.Entry(root, textvariable=output_filename, width=40, justify="center", font=("Verdana", 12))
-    output_entry.grid(row=14, column=0, columnspan=6, sticky='s')
+    output_entry.grid(row=14, column=0, columnspan=5, sticky='s')
 
     run_button = tk.Button(root, text="Enter", width=10, bg="green", fg="black", font=("Verdana", 12), command=on_enter)
-    run_button.grid(row=15, column=0, columnspan=6, pady=10, sticky='s')
+    run_button.grid(row=15, column=0, columnspan=5, pady=10, sticky='s')
 
     status_label = tk.Label(root, text="", fg="blue", font=("Verdana", 14))
-    status_label.grid(row=16, column=0, columnspan=6)
+    status_label.grid(row=16, column=0, columnspan=5)
 
 
     # Adding weight to rows and columns
-    root.grid_columnconfigure(0, weight=1)
-    root.grid_columnconfigure(1, weight=1)  
+    root.grid_columnconfigure(0, weight=0)
+    root.grid_columnconfigure(1, weight=0)  
     root.grid_columnconfigure(2, weight=0)  
-    root.grid_columnconfigure(3, weight=1)  
-    root.grid_columnconfigure(4, weight=1)
+    root.grid_columnconfigure(3, weight=0)  
+    root.grid_columnconfigure(4, weight=0, minsize= 439)
 
     root.grid_rowconfigure(11, weight=1)
     root.grid_rowconfigure(12, weight=0)

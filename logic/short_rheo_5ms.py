@@ -6,9 +6,10 @@ from scipy.signal import savgol_filter, find_peaks
 
 
 def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd()):
-    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name)
-
+    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name)
+    error_msg = ""
     print("Rheo_5ms Data:")
+    df["Short Rheo 5ms"] = None
     # f.write(f"Rheo_5ms Data:\n")
 
 
@@ -21,8 +22,10 @@ def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.
     passed_check_func = 0
 
     while sweep_index < num_sweeps and not threshold_checked:
-        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded)
+        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded, current_record=current_record, protocol="rheo")
 
+        if not current_record:
+            error_msg = "Current not recorded in this file. Used Epoch instead."
         sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=False)
         
         curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c)
@@ -171,13 +174,13 @@ def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.
     elif "(pA)" in c_label:
         current_units = "pA"
     print(f"Holding Current ({current_units}): {holding_curr}")
-    df[f"Holding Current 1s ({current_units})"] = holding_curr
+    df[f"Holding Current 5ms ({current_units})"] = holding_curr
 
     print(f"Rheobase ({current_units}): {stim_curr}")
-    df[f"Rheobase 1s ({current_units})"] = stim_curr
+    df[f"Rheobase 5ms ({current_units})"] = stim_curr
 
     print(f"Relative Rheobase ({current_units}): {rheobase}")
-    df[f"Relative Rheobase 1s ({current_units})"] = rheobase
+    df[f"Relative Rheobase 5ms ({current_units})"] = rheobase
     print(f"Current start time: {curr_start_time}")
 
     print(f"AP Peak (mV): {filtered_peak_volt}")
@@ -237,4 +240,4 @@ def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.
 
     phase_plane_table = phase_plane(sweep_x, sweep_y, sweep_y_d, df, step="5ms", output_dir=output_dir)
 
-    return df, phase_plane_table
+    return df, phase_plane_table, error_msg

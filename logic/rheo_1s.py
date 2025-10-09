@@ -5,8 +5,8 @@ from scipy.signal import savgol_filter
 
 def rheo_1s(file_name, df, dvdt=20, output_dir=os.getcwd()):
 
-    # if is_ramp(file_name):
-    #     raise Exception("Rheo_1s file is not a Rheostep")
+    if is_ramp(file_name):
+        raise Exception("Rheo_1s file is not a Rheostep")
     print("Rheo_1s Data:")
     # f.write("Rheo_1s Data:\n")
 
@@ -93,6 +93,9 @@ def rheo_1s(file_name, df, dvdt=20, output_dir=os.getcwd()):
         ap_delay = adjust_units(ap_delay)
         print(f"Time to Spike (ms): {ap_delay}")
         df[f"Time to Spike Rheo (ms)"] = ap_delay
+    
+    if ap_bool == 0:
+        erm = "No Action Potential Detected"
 
-    return df    
+    return df, erm   
     

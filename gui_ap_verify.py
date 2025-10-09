@@ -22,7 +22,11 @@ def resource_path(relative_path):
 
 def ap_count_window(image_names, ap_counts):
     global window_width
-    ap_verify_window = tk.Toplevel()
+    try:
+        ap_verify_window = tk.Toplevel()
+    except tk.TclError:
+        ap_verify_window = tk.Tk()
+        ap_verify_window.withdraw()
     ap_verify_window.title("Verify Action Potential Counts")
     ap_verify_window.geometry("1280x400")   
     window_width = 1280

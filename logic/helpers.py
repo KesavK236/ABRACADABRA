@@ -1,17 +1,67 @@
 import pyabf
 # from pynwb import NWBHDF5IO
 import numpy as np
-from scipy.signal import savgol_filter, butter, filtfilt
+from scipy.signal import savgol_filter, butter, filtfilt, find_peaks
 import matplotlib.pyplot as plt
 import os
 from hampel import hampel
 from numpy.lib.stride_tricks import sliding_window_view
 
-def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyorder=3, loaded=None):
+def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyorder=3, loaded=None, protocol="rheo", current_record = -1):
+    """
+    Loads the ABF into arrays and features depending on sweep index.
+
+    Parameters
+    ----------
+    file_name : str
+        The filepath of the ABF file.
+    sweep_num : int, optional
+        The index of the sweep to extract. Default is 0.
+    smooth : bool, optional
+        If True, the voltage sweep will be filtered with a Savitzky-Golay filter.
+        If False (default), the voltage sweep will not be filtered.
+    window_length : int, optional
+        The length of the window for the Savitzky-Golay filter. Default is 25.
+    polyorder : int, optional
+        The polynomial order for the Savitzky-Golay filter. Default is 3.
+    loaded : ABF object, optional
+        A pre-loaded ABF object (e.g., `pyabf.ABF`). Default is None, meaning the
+        file will be loaded fresh.
+
+    Returns
+    -------
+    tuple
+        A tuple containing the following:
+
+        number_sweeps : int
+            The number of sweeps in the ABF.
+        sweep_x : array-like of float
+            Time points of the given sweep.
+        sweep_y : array-like of float
+            Voltage points of the given sweep. Optionally filtered.
+        sweep_y_raw : array-like of float
+            Unfiltered voltage points of the given sweep.
+        sweep_c : array-like of float
+            The recorded current points of the given sweep.
+        sweep_stim : array-like of float
+            The stimulus current points from the epoch protocol of the given sweep.
+        x_label : str
+            Units of the time sweep.
+        y_label : str
+            Units of the voltage sweep.
+        c_label : str
+            Units of the current sweep.
+        loaded : ABF object
+            The loaded ABF object.
+        sample_rate : int
+            The sample rate of the ABF recording.
+    """
+
     if loaded == None:
         abf = pyabf.ABF(file_name)
     else:
         abf = loaded
+    number_sweeps = num_sweeps(abf)
     abf.setSweep(sweep_num, channel=0)
     loaded = abf
     sweep_x = np.array(abf.sweepX)
@@ -22,13 +72,56 @@ def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyor
         sweep_y = savgol_filter(sweep_y, window_length=window_length, polyorder=polyorder)
     x_label = abf.sweepLabelX
     y_label = abf.sweepLabelY
+    sweep_c = np.array(abf.sweepC)
+    c_label = abf.sweepLabelC
+    if current_record == -1:
+        try:
+            peaks = verify_current(abf, number_sweeps)
 
+            if protocol == "rheo" and peaks != 1 and peaks != -1 :
+                raise Exception("Channel 1 isn't current")
+            if protocol == "ramp" and peaks != 0 and peaks != -1:
+                raise Exception("Channel 1 isn't current")
+            abf.setSweep(sweep_num, channel=1)
+            sweep_c = np.array(abf.sweepY)
+            c_label = abf.sweepLabelY
+            current_record = 1
+            if "(nA)" and "(pA)" not in c_label:
+                raise Exception("Channel 1 isn't current")
+        except:
+            abf.setSweep(sweep_num, channel=0)
+            sweep_c = np.array(abf.sweepC)
+            c_label = abf.sweepLabelC
+            current_record = 0
+    elif current_record == 1:
+        abf.setSweep(sweep_num, channel=1)
+        sweep_c = np.array(abf.sweepY)
+        c_label = abf.sweepLabelY
+    else:
+        abf.setSweep(sweep_num, channel=0)
+        sweep_c = np.array(abf.sweepC)
+        c_label = abf.sweepLabelC
+    
+    sample_rate = abf.sampleRate
+
+    return number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, current_record
+
+
+def verify_current(abf, number_sweeps):
+    
+    sweep_num = number_sweeps - 1
+    abf.setSweep(sweep_num, channel=0)
+    sweep_x = np.array(abf.sweepX)
     abf.setSweep(sweep_num, channel=1)
     sweep_c = np.array(abf.sweepY)
-    number_sweeps = num_sweeps(abf)
-    c_label = abf.sweepLabelY
-    sample_rate = abf.sampleRate
-    return number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate
+    didt = np.gradient(sweep_c, sweep_x*1000)
+    didt_peak = max(didt)
+    if didt_peak < 500:
+        return -1
+    di_peaks, di_props = find_peaks(didt, 500)
+    return len(di_peaks)
+    
+
 
 
 # def load_nwb(file_name, sweep_num=0, smooth=False, window_length=25, polyorder=3, loaded=None):
@@ -97,7 +190,7 @@ def butter_lowpass_filter(x, cutoff_hz, fs_hz, order=4):
     return filtfilt(b, a, x)
 
 
-def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c, units="pA"):    
+def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c, units="pA"):  
     if units == "nA":
         sweep_c = sweep_c * 1e3
     elif units == "A":
@@ -112,9 +205,9 @@ def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
         zero_sweep_bool = True
         sweep_c_stored = sweep_c
         try:
-            _, _, _, _, sweep_c, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
+            _, _, _, _, sweep_c, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
         except:
-            _, _, _, _, sweep_c, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
+            _, _, _, _, sweep_c, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
         sweep_c = butter_lowpass_filter(sweep_c, cutoff_hz=5000, fs_hz=sample_rate, order=4)
         sweep_c_base_smooth = savgol_filter(sweep_c, window_length=100, polyorder=3)
 
@@ -135,16 +228,21 @@ def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
     middle_index = (curr_start_index + curr_end_index) // 2
     stim_curr = np.mean(sweep_c[middle_index - 500 : middle_index + 500])
     
+    # plt.clf()
+    # plt.plot(sweep_x, sweep_c)
+    # plt.plot(sweep_x[curr_start_index], sweep_c[curr_start_index], 'ro')
+    # plt.plot(sweep_x[curr_end_index], sweep_c[curr_end_index], 'go')
+    # plt.show()
     return curr_start_index, curr_end_index, holding_curr, stim_curr
 
 def current_injection_points_ramp(abf, sample_rate, sweep_ind, sweep_x, sweep_c, sweep_stim, units="pA"):
     zero_sweep_bool = False
     stim_diff = np.abs(np.max(sweep_stim) - np.min(sweep_stim))
-    if stim_diff < 1.5:
+    if stim_diff <= 0:
         try:
-            _, _, _, _, _, sweep_stim, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
+            _, _, _, _, _, sweep_stim, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
         except IndexError:
-            _, _, _, _, _, sweep_stim, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
+            _, _, _, _, _, sweep_stim, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
 
     sweep_c_base_smooth = savgol_filter(sweep_c, window_length=25, polyorder=3)
     sweep_c_roll_mean = rolling_mean(sweep_c_base_smooth, win=1001)
@@ -154,9 +252,9 @@ def current_injection_points_ramp(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
         zero_sweep_bool = True
         sweep_c_stored = sweep_c
         try:
-            _, _, _, _, sweep_c, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
+            _, _, _, _, sweep_c, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
         except:
-            _, _, _, _, sweep_c, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
+            _, _, _, _, sweep_c, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
         sweep_c = butter_lowpass_filter(sweep_c, cutoff_hz=5000, fs_hz=sample_rate, order=4)
         sweep_c_base_smooth = savgol_filter(sweep_c, window_length=25, polyorder=3)
         sweep_c_roll_mean = rolling_mean(sweep_c_base_smooth, win=1001)
@@ -273,12 +371,16 @@ def generate_derivatives(sweep_x, sweep_y, hampel_bool=False):
 
 def is_ramp(filename):
     is_ramp_file = True
-    number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate = load_abf(file_name=filename, sweep_num= 1)
+    number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, _ = load_abf(file_name=filename, sweep_num= 1)
     
-    sweep_c_d = np.diff(sweep_c) / (1000 * np.diff(sweep_x))
 
-    curr_start_index, curr_end_index = current_injection_points_rheo(sweep_c)
-    if sweep_c_d[curr_start_index + 500] == 0:
+    sweep_stim_d = np.gradient(sweep_stim)
+    i = 0
+    while sweep_stim[i] == 0:
+        i += 1
+
+
+    if sweep_stim_d[i + 500] == 0:
         is_ramp_file = False
     else:
         is_ramp_file = True
