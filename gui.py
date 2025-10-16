@@ -27,10 +27,6 @@ def launch_gui(root):
         for i in range(6):
             error_labels[i].config(text="")
         root.update_idletasks()
-        print(root.geometry())
-        for c in range(5):
-            x, y, width, height = root.grid_bbox(c, 3)  # col=c, row=3
-            print(f"Row 3, Column {c} width:", width)
         try:
             callback(
                 file_paths=filenames,

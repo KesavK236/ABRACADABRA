@@ -25,7 +25,7 @@ def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.
         num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded, current_record=current_record, protocol="rheo")
 
         if not current_record:
-            error_msg = "Current not recorded in this file. Used Epoch instead."
+            error_msg = "Current not recorded in Rheo 5ms. Used Epoch instead."
         sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=False)
         
         curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c)

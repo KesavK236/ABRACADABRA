@@ -29,7 +29,7 @@ def ramp_1s(file_name, df, dvdt=20, verify_threshold=False, output_dir=os.getcwd
     while i < num_sweep and ap_bool == 0:
         _, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim,  x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded, protocol="ramp", current_record=current_record)
         if not current_record:
-            error_msg = "Current not recorded in this file. Used Epoch instead."
+            error_msg = "Current not recorded in Ramp 1s. Used Epoch instead."
         sweep_y_d, sweep_x_d, _, _ = generate_derivatives(sweep_x, sweep_y)
 
         curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_ramp(loaded, sample_rate, i, sweep_x, sweep_c, sweep_stim)
@@ -55,7 +55,8 @@ def ramp_1s(file_name, df, dvdt=20, verify_threshold=False, output_dir=os.getcwd
             )
             image_made = True
         i += 1
-
+    if i == num_sweep and ap_bool == 0:
+        error_msg = "No Action Potential Detected in any sweep."
     if ap_bool:
         
         print(f"Holding Current ({current_units}): {holding_curr}")

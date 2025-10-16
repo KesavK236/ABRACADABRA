@@ -108,7 +108,7 @@ def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyor
 
 
 def verify_current(abf, number_sweeps):
-    
+    sample_rate = abf.dataRate
     sweep_num = number_sweeps - 1
     abf.setSweep(sweep_num, channel=0)
     sweep_x = np.array(abf.sweepX)
@@ -118,8 +118,16 @@ def verify_current(abf, number_sweeps):
     didt_peak = max(didt)
     if didt_peak < 500:
         return -1
-    di_peaks, di_props = find_peaks(didt, 500)
-    return len(di_peaks)
+    di_peaks, di_props = find_peaks(didt, 1000)
+    num_peaks = len(di_peaks)
+    end = np.argmin(didt)
+    # print(f"numpeaks {num_peaks}")
+    for i in range(len(di_peaks)):
+        if abs(di_peaks[i] - end) < 0.01 * sample_rate:
+            num_peaks -= 1
+    #     print(f"peaks {di_peaks[i]} end {end}")
+    # print(f"numpeaks {num_peaks}")
+    return num_peaks
     
 
 
@@ -217,16 +225,16 @@ def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
     min = np.argmin(dadt)
     max = np.argmax(dadt)
     if min < max:
-        curr_start_index = min
-        curr_end_index = max
+        curr_start_index = min - 1
+        curr_end_index = max - 1 
     else:
-        curr_start_index = max
-        curr_end_index = min
+        curr_start_index = max -1 
+        curr_end_index = min - 1  
     if zero_sweep_bool:
         sweep_c = sweep_c_stored
-    holding_curr = np.mean(sweep_c[curr_start_index - 1000 : curr_start_index - 1])
+    holding_curr = np.mean(sweep_c[ 100 : curr_start_index - 100])
     middle_index = (curr_start_index + curr_end_index) // 2
-    stim_curr = np.mean(sweep_c[middle_index - 500 : middle_index + 500])
+    stim_curr = np.mean(sweep_c[curr_start_index + 500 : curr_end_index - 500])
     
     # plt.clf()
     # plt.plot(sweep_x, sweep_c)
@@ -371,12 +379,18 @@ def generate_derivatives(sweep_x, sweep_y, hampel_bool=False):
 
 def is_ramp(filename):
     is_ramp_file = True
-    number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, _ = load_abf(file_name=filename, sweep_num= 1)
+    sweep_num = 1
+    number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, _ = load_abf(file_name=filename, sweep_num=sweep_num)
     
+    max_current = np.max(sweep_stim)
+    min_current = np.min(sweep_stim)
+    while max_current == 0 and min_current == 0:
+        number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, _ = load_abf(file_name=filename, sweep_num=sweep_num + 1, loaded=loaded)
+        max_current = np.max(sweep_stim)
 
     sweep_stim_d = np.gradient(sweep_stim)
     i = 0
-    while sweep_stim[i] == 0:
+    while sweep_stim[i] == 0 and i < len(sweep_stim):
         i += 1
 
 
