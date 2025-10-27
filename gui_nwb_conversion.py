@@ -1,6 +1,8 @@
 import tkinter as tk
 import sys
 import os
+from config_manager import load_config, save_config 
+
 
 def nwb_conversion_input_window():
     global metadata
@@ -25,7 +27,16 @@ def nwb_conversion_input_window():
             "date_of_birth": date_of_birth.get() +"T00:00:00",
             "NWB_file_name": nwb_name.get() + ".nwb"
         }
+        config["targeted_layer"] = targeted_layer.get()
+        config["inferred_layer"] = inferred_layer.get()
+        config["lab"] = lab.get()
+        config["institution"] = institution.get()
+        config["experimenter"] = experimenter.get()
+        config["species"] = species.get()
+        save_config(config)
         convert_window.destroy()
+
+    config = load_config()
 
     title_label = tk.Label(convert_window, text="NWB Conversion Metadata", font=('Verdana', 16))
     title_label.grid(row=0, column=0, columnspan=2)
@@ -33,15 +44,25 @@ def nwb_conversion_input_window():
     cell_id = tk.StringVar()
     slice_id = tk.StringVar()
     targeted_layer = tk.StringVar()
+    if "targeted_layer" in config:
+        targeted_layer.set(config["targeted_layer"])
     inferred_layer = tk.StringVar()
+    if "inferred_layer" in config:
+        inferred_layer.set(config["inferred_layer"])
     session_description = tk.StringVar()
     lab = tk.StringVar()
+    if "lab" in config:
+        lab.set(config["lab"])
     institution = tk.StringVar()
-    institution.set("Washington University in St. Louis")
+    if "institution" in config:
+        institution.set(config["institution"])
     experimenter = tk.StringVar()
+    if "experimenter" in config:
+        experimenter.set(config["experimenter"])
     subject_id = tk.StringVar()
     species = tk.StringVar()
-    species.set("Homo sapiens")
+    if "species" in config:
+        species.set(config["species"])
     sex = tk.StringVar()
     date_of_birth = tk.StringVar()
     nwb_name = tk.StringVar()

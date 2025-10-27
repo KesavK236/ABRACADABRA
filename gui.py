@@ -3,6 +3,7 @@ from tkinter.filedialog import askopenfilename
 import sys
 from logic.summary import callback
 from logic.nwb_conversion import convert_to_nwb
+from config_manager import load_config, save_config
 
 filenames = ["No File Chosen"] * 6
 
@@ -60,7 +61,16 @@ def launch_gui(root):
 
     def on_closing():
         root.destroy()
+        config["dvdt_value"] = dvdt_value.get()
+        config["check_threshold"] = check_threshold.get()
+        config["check_ap_counts"] = check_ap_counts.get()
+        config["open_excel"] = open_excel.get()
+        config["open_phase"] = open_phase.get()
+        save_config(config)
         sys.exit()
+
+    config = load_config()
+
 
     root.protocol("WM_DELETE_WINDOW", on_closing)
     
@@ -99,22 +109,32 @@ def launch_gui(root):
     dvdt_label.grid(row=8, column=0, columnspan=2, sticky="e", pady=10)
 
     dvdt_value = tk.StringVar(value="10")
+    if "dvdt_value" in config:
+        dvdt_value.set(int(config["dvdt_value"]))
     spinbox_dvdt = tk.Spinbox(root, from_=1, to=100, width=5, textvariable=dvdt_value, font=("Verdana", 12))
     spinbox_dvdt.grid(row=8, column=3, sticky="w")
 
     check_threshold = tk.BooleanVar()
+    if "check_threshold" in config:
+        check_threshold.set(bool(config["check_threshold"]))
     threshold_check = tk.Checkbutton(root, text="Verify Threshold Value", font=("Verdana", 12), variable=check_threshold)
     threshold_check.grid(row=9, column=2, columnspan=3, sticky='w')
 
     check_ap_counts = tk.BooleanVar()
+    if "check_ap_counts" in config:
+        check_ap_counts.set(bool(config["check_ap_counts"]))
     ap_count_check = tk.Checkbutton(root, text="Verify AP Counts", font=("Verdana", 12), variable=check_ap_counts)
     ap_count_check.grid(row=10, column=2, columnspan=3, sticky='w')
 
     open_excel = tk.BooleanVar(value=True)
+    if "open_excel" in config:
+        open_excel.set(bool(config["open_excel"]))
     open_excel_check = tk.Checkbutton(root, text="Open Analysis after analysis", font=("Verdana", 12), variable=open_excel)
     open_excel_check.grid(row=11, column=2, columnspan=3, sticky='sw', pady=10)
 
     open_phase = tk.BooleanVar()
+    if "open_phase" in config:
+        open_phase.set(bool(config["open_phase"]))
     open_phase_check = tk.Checkbutton(root, text="Open Phase Plane after analysis", font=("Verdana", 12), variable=open_phase)
     open_phase_check.grid(row=12, column=2, columnspan=3, sticky='w')
 
