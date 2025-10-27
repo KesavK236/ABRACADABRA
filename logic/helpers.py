@@ -301,7 +301,7 @@ def current_injection_points_ramp(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
 
     return current_start_index, current_end_index, holding_curr, stim_curr
 
-def ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index, curr_end_indx, dvdt):
+def ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index, curr_end_indx, dvdt, sample_rate):
     j = curr_start_index
     resting_current = sweep_c[j-10]
     ap_bool = 0
@@ -309,8 +309,10 @@ def ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start
     rheobase = 0
     ap_delay = 0
     threshold_dvdt = int(dvdt)
+    voltage_threshold = 0
+    end_buffer = int(0.002 * sample_rate)
     # maybe need to add a extra check to ensure this is an action potential
-    while j < curr_end_indx and ap_bool == 0:
+    while j < curr_end_indx  and ap_bool == 0:
         if sweep_y_d[j] > threshold_dvdt:
             ap_bool = 1
             current_threshold = sweep_c[j]
