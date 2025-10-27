@@ -3,8 +3,7 @@ from gui import launch_gui
 import sys
 import os
 
-# pyinstaller --clean --onefile --noconsole --icon=assets/ABRACADABRA.ico --hidden-import=hampel  main.py
-
+# pyinstaller main.py --clean --onefile --noconsole --icon=assets/ABRACADABRA.ico --hidden-import=hampel --name ABRACADABRA --noconfirm --collect-data hdmf --collect-data pynwb --collect-submodules hdmf --collect-submodules pynwb --collect-all neuroconv --collect-all ndx_dandi_icephys
 # Gets the relative paths for the output files
 def resource_path(relative_path):
     try:

@@ -1,5 +1,5 @@
 import pyabf
-# from pynwb import NWBHDF5IO
+from pynwb import NWBHDF5IO
 import numpy as np
 from scipy.signal import savgol_filter, butter, filtfilt, find_peaks
 import matplotlib.pyplot as plt
@@ -123,7 +123,7 @@ def verify_current(abf, number_sweeps):
     end = np.argmin(didt)
     # print(f"numpeaks {num_peaks}")
     for i in range(len(di_peaks)):
-        if abs(di_peaks[i] - end) < 0.01 * sample_rate:
+        if abs(di_peaks[i] - end) < 0.0005 * sample_rate:
             num_peaks -= 1
     #     print(f"peaks {di_peaks[i]} end {end}")
     # print(f"numpeaks {num_peaks}")
@@ -316,10 +316,11 @@ def ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start
             current_threshold = sweep_c[j]
             rheobase = sweep_c[j] - resting_current
             ap_delay = sweep_x_d[j] - sweep_x[curr_start_index]
+            voltage_threshold = sweep_y[j]
 
         j += 1
 
-    return ap_bool, current_threshold, rheobase, ap_delay
+    return ap_bool, current_threshold, rheobase, ap_delay, voltage_threshold
 
 def get_max(sweep_x, sweep_y, max_index, sampling_rate, delta=0.00001):
     lower_bound_index = int((sweep_x[max_index] - delta) * sampling_rate)

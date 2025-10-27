@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter.filedialog import askopenfilename
 import sys
 from logic.summary import callback
+from logic.nwb_conversion import convert_to_nwb
 
 filenames = ["No File Chosen"] * 6
 
@@ -46,6 +47,17 @@ def launch_gui(root):
         finally:
             run_button.config(state="normal")
 
+    def on_convert():
+        convert_button.config(state="disabled")
+        status_label.config(text="Converting to NWB...", fg="blue")
+        for i in range(6):
+            error_labels[i].config(text="")
+        root.update_idletasks()
+        convert_to_nwb(file_names=filenames, output_folder=output_filename.get())
+        convert_button.config(state="normal")
+        status_label.config(text="NWB Conversion Complete!", fg="green")
+
+
     def on_closing():
         root.destroy()
         sys.exit()
@@ -66,7 +78,7 @@ def launch_gui(root):
 
         label_text = protocols[i]
         label = tk.Label(root, text=label_text, font=("Verdana", 12))
-        label.grid(row=i+1, column=1, padx=(214, 6), sticky='e')
+        label.grid(row=i+1, column=1, padx=(220, 6), sticky='e')
 
         spacer = tk.Label(root, text=" ")  # empty column to center the gap
         spacer.grid(row=i+1, column=2, padx=0, pady=10)
@@ -113,11 +125,14 @@ def launch_gui(root):
     output_entry = tk.Entry(root, textvariable=output_filename, width=40, justify="center", font=("Verdana", 12))
     output_entry.grid(row=14, column=0, columnspan=5, sticky='s')
 
-    run_button = tk.Button(root, text="Enter", width=10, bg="green", fg="black", font=("Verdana", 12), command=on_enter)
+    run_button = tk.Button(root, text="Enter", width=15, bg="green", fg="black", font=("Verdana", 12), command=on_enter)
     run_button.grid(row=15, column=0, columnspan=5, pady=10, sticky='s')
 
     status_label = tk.Label(root, text="", fg="blue", font=("Verdana", 14))
-    status_label.grid(row=16, column=0, columnspan=5)
+    status_label.grid(row=17, column=0, columnspan=5)
+
+    convert_button = tk.Button(root, text="Convert to NWB", width=15, bg="orange", fg="black", font=("Verdana", 12), command=on_convert)
+    convert_button.grid(row=16, column=0, columnspan=5, pady=5, sticky='s')
 
 
     # Adding weight to rows and columns

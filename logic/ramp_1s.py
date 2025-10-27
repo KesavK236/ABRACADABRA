@@ -40,7 +40,7 @@ def ramp_1s(file_name, df, dvdt=20, verify_threshold=False, output_dir=os.getcwd
                 current_units = "nA"
             elif "(pA)" in c_label:
                 current_units = "pA"
-            ap_bool, current_threshold, rheobase, ap_delay = ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index, curr_end_index, dvdt)
+            ap_bool, current_threshold, rheobase, ap_delay, voltage_threshold = ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index, curr_end_index, dvdt)
         
         if ap_bool == 1 and not image_made:
             image_name = no_spaces(df.index[0]) + f"_ramp_1s_graph.png"
@@ -68,5 +68,8 @@ def ramp_1s(file_name, df, dvdt=20, verify_threshold=False, output_dir=os.getcwd
         ap_delay = adjust_units(ap_delay)
         print(f"Time to Spike (ms): {ap_delay}")
         df["Time to Spike Ramp (ms)"] = ap_delay
-
+        print(f"Voltage at Threshold Ramp 1s (mV): {voltage_threshold}")
+        df["Voltage at Threshold Ramp 1s (mV)"] = voltage_threshold
+        print(f"Current at Threshold Ramp 1s (pA): {current_threshold}")
+        df["Current at Threshold Ramp 1s (pA)"] = current_threshold
     return df, error_msg

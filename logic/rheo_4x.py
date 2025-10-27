@@ -26,7 +26,7 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
     loaded = None
     current_record = -1
 
-    for i in range(4):
+    for i in range(num_sweeps):
         _, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim,  x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
         if not current_record:
             error_msg = "Current not recorded in Rheo 4x. Used Epoch instead."
@@ -56,6 +56,7 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
         # plt1.plot(sweep_x, sweep_y)
         # plt.plot(sweep_x_d, sweep_y_d)
         # plt.show()
+        dvdt = 10
  
         while j < len(sweep_y_d) - 1:
             if sweep_y_d[j] >= dvdt and ap_found == 0 and finding_peak == 0:
@@ -92,7 +93,7 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
     if check_ap_counts:
         ap_counts[:] = ap_count_window(image_names, ap_counts)
 
-    for i in range(4):
+    for i in range(num_sweeps):
         print(f"Holding Current at Rheo {i+1}x rheobase: {holding_currs[i]}")
         df[f"Holding Current at Rheo {i+1}x rheobase"] = holding_currs[i]
         print(f"Stimulus Current at Rheo {i+1}x rheobase: {stim_currs[i]}")
