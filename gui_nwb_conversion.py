@@ -24,7 +24,8 @@ def nwb_conversion_input_window():
             "subject_id": subject_id.get(),
             "species": species.get(),
             "sex": sex.get(),
-            "date_of_birth": date_of_birth.get() +"T00:00:00",
+            "days_in_vitro": days_in_vitro.get(),
+            "tissue_preparation": preparation.get(),
             "NWB_file_name": nwb_name.get() + ".nwb"
         }
         config["targeted_layer"] = targeted_layer.get()
@@ -64,8 +65,9 @@ def nwb_conversion_input_window():
     if "species" in config:
         species.set(config["species"])
     sex = tk.StringVar()
-    date_of_birth = tk.StringVar()
+    days_in_vitro = tk.StringVar()
     nwb_name = tk.StringVar()
+    preparation = tk.StringVar()
 
     label_cell_id = tk.Label(convert_window, text="Cell ID:", font=('Verdana', 12))
     label_cell_id.grid(row=1, column=0)
@@ -133,20 +135,26 @@ def nwb_conversion_input_window():
     entry_sex = tk.Entry(convert_window, textvariable=sex, font=('Verdana', 12), width=30)
     entry_sex.grid(row=11, column=1)
 
-    label_date_of_birth = tk.Label(convert_window, text="Date of Birth (YYYY-MM-DD):", font=('Verdana', 12))
-    label_date_of_birth.grid(row=12, column=0)
+    label_days_in_vitro = tk.Label(convert_window, text="Days in Vitro:", font=('Verdana', 12))
+    label_days_in_vitro.grid(row=12, column=0)
 
-    entry_date_of_birth = tk.Entry(convert_window, textvariable=date_of_birth, font=('Verdana', 12), width=30)
-    entry_date_of_birth.grid(row=12, column=1)
+    entry_days_in_vitro = tk.Entry(convert_window, textvariable=days_in_vitro, font=('Verdana', 12), width=30)
+    entry_days_in_vitro.grid(row=12, column=1)
+
+    label_preparation = tk.Label(convert_window, text="Tissue Preparation", font=('Verdana', 12))
+    label_preparation.grid(row=13, column=0)
+
+    entry_preparation = tk.Entry(convert_window, textvariable=preparation, font=('Verdana', 12), width=30)
+    entry_preparation.grid(row=13, column=1)
 
     label_nwb_name = tk.Label(convert_window, text="NWB File Name", font=('Verdana', 12))
-    label_nwb_name.grid(row=13, column=0)
+    label_nwb_name.grid(row=14, column=0)
 
     entry_nwb_name = tk.Entry(convert_window, textvariable=nwb_name, font=('Verdana', 12), width=30)
-    entry_nwb_name.grid(row=13, column=1)
+    entry_nwb_name.grid(row=14, column=1)
 
     enter_button = tk.Button(convert_window, text="Enter", width=15, bg="green", fg="black", font=("Verdana", 12), command=on_enter)
-    enter_button.grid(row=14, column=0, columnspan=2, pady=10, sticky='s')
+    enter_button.grid(row=15, column=0, columnspan=2, pady=10, sticky='s')
     
     convert_window.grab_set()
     convert_window.wait_window()

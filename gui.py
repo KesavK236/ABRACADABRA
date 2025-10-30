@@ -54,9 +54,14 @@ def launch_gui(root):
         for i in range(6):
             error_labels[i].config(text="")
         root.update_idletasks()
-        convert_to_nwb(file_names=filenames, output_folder=output_filename.get())
-        convert_button.config(state="normal")
-        status_label.config(text="NWB Conversion Complete!", fg="green")
+        try:
+            convert_to_nwb(file_names=filenames, output_folder=output_filename.get())
+        except Exception as e:
+            status_label.config(text=f"Error: {str(e)}", fg="red")
+        else:
+            status_label.config(text="NWB Conversion Complete!", fg="green")
+        finally:
+            convert_button.config(state="normal")
 
 
     def on_closing():
@@ -149,7 +154,7 @@ def launch_gui(root):
     run_button.grid(row=15, column=0, columnspan=5, pady=10, sticky='s')
 
     status_label = tk.Label(root, text="", fg="blue", font=("Verdana", 14))
-    status_label.grid(row=17, column=0, columnspan=5)
+    status_label.grid(row=17, column=0, columnspan=6)
 
     convert_button = tk.Button(root, text="Convert to NWB", width=15, bg="orange", fg="black", font=("Verdana", 12), command=on_convert)
     convert_button.grid(row=16, column=0, columnspan=5, pady=5, sticky='s')

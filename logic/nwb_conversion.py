@@ -60,7 +60,9 @@ def convert_to_nwb(file_names, output_folder):
         "slice_id": inputs["slice_id"],
         "targeted_layer": inputs["targeted_layer"],
         "inferred_layer": inputs["inferred_layer"],
-        "recording_sessions": sessions
+        "recording_sessions": sessions,
+        "days in vitro": inputs["days_in_vitro"],
+        "tissue_preparation": inputs["tissue_preparation"]
     }
 
     interface = AbfInterface(
@@ -89,8 +91,7 @@ def convert_to_nwb(file_names, output_folder):
     metadata["Subject"] = dict(
         subject_id=inputs["subject_id"],
         species=inputs["species"],
-        sex=sex_string,
-        date_of_birth= inputs["date_of_birth"]
+        sex=sex_string
     )
 
     folder_name = output_folder + "_outputs"
