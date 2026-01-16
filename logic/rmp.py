@@ -9,7 +9,7 @@ def rmp(file_name, df, output_dir=os.getcwd()):
     df["RMP"] = None
     # f.write("Rmp Data:\n")
     error_msg = ""
-    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name, sweep_num=0, smooth=False)
+    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=0, smooth=False)
 
     resting_potential = sweep_y.mean()
 
