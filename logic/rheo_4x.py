@@ -27,11 +27,18 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
     current_record = -1
 
     for i in range(num_sweeps):
-        _, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim,  x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
+        _, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
         if not current_record:
             error_msg = "Current not recorded in Rheo 4x. Used Epoch instead."
         sweep_y_d, sweep_x_d, *_ = generate_derivatives(sweep_x, sweep_y)
-        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_ramp(loaded, sample_rate, i, sweep_x, sweep_c, sweep_stim)
+
+        units = loaded.sweepUnitsC
+        if "nA" in units:
+                current_units = "nA"
+        elif "pA" in units:
+                current_units = "pA"
+
+        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_ramp(loaded, sample_rate, i, sweep_x, sweep_c, sweep_stim, current_units)
 
         j = curr_start_index - 100
         ap_found = 0

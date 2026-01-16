@@ -6,23 +6,25 @@ from scipy.signal import savgol_filter, find_peaks
 
 
 def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd()):
-    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name)
+    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name)
     error_msg = ""
     print("Rheo_5ms Data:")
     df["Short Rheo 5ms"] = None
     # f.write(f"Rheo_5ms Data:\n")
 
+    units = loaded.sweepUnitsC
+    if "nA" in units:
+            current_units = "nA"
+    elif "pA" in units:
+            current_units = "pA"
+    curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c, current_units)
 
-    curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c)
-   
-
-    
     sweep_index = 0
     threshold_checked = False
     passed_check_func = 0
 
     while sweep_index < num_sweeps and not threshold_checked:
-        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded, current_record=current_record, protocol="rheo")
+        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded, current_record=current_record, protocol="rheo")
 
         if not current_record:
             error_msg = "Current not recorded in Rheo 5ms. Used Epoch instead."

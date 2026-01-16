@@ -29,20 +29,23 @@ def ramp_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(
     index_in_sweep = 0
     i = 0
     while i < num_sweep and threshold_checked == 0:
-        _, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim,  x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded, protocol="ramp", current_record=current_record)
+        _, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded, protocol="ramp", current_record=current_record)
         if not current_record:
             error_msg = "Current not recorded in Ramp 1s. Used Epoch instead."
         sweep_y_d, sweep_x_d, _, _ = generate_derivatives(sweep_x, sweep_y)
         dvdt_max = max(sweep_y_d)
 
-        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_ramp(loaded, sample_rate, index_in_sweep, sweep_x, sweep_c, sweep_stim)
+        units = loaded.sweepUnitsC
+        if "nA" in units:
+                current_units = "nA"
+        elif "pA" in units:
+                current_units = "pA"
+        
+        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_ramp(loaded, sample_rate, index_in_sweep, sweep_x, sweep_c, sweep_stim, current_units)
 
         ap_max = max(sweep_y)
         if ap_max > 0 and dvdt_max >= dvdt:
-            if "(nA)" in c_label:
-                current_units = "nA"
-            elif "(pA)" in c_label:
-                current_units = "pA"
+            
             
             if passed_check_func == 0:
                 upper_window = sweep_x[np.argmax(sweep_y_d)]

@@ -6,7 +6,7 @@ from scipy.signal import find_peaks
 
 
 def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd()):
-    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name)
+    num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name)
 
     error_msg = ""
 
@@ -17,13 +17,7 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
     df["Rheo 1s"] = None
     # f.write(f"Rheo_1s Data:\n")
 
-    
-    curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c)
-    
-    if "(nA)" in c_label:
-            current_units = "nA"
-    elif "(pA)" in c_label:
-            current_units = "pA"
+    curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c, current_units)
 
     curr_length = curr_end_index - curr_start_index
     standard_curr_start = curr_start_index
@@ -33,14 +27,15 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
     threshold_checked = False
     passed_check_func = 0
     hyper_pol_input_res_array = []
+    sag_peak = 0
 
     while sweep_index < num_sweeps and not threshold_checked:
-        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_record = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
+        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
         if not current_record:
             error_msg = "Current not recorded in Rheo 1s. Used Epoch instead."
         sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=False)
         
-        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, sweep_index, sweep_x, sweep_c)
+        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, sweep_index, sweep_x, sweep_c, current_units)
 
         curr_diff = stim_curr - holding_curr
         if curr_diff < -7.5:
@@ -48,14 +43,13 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
 
             base_volt = np.mean(sweep_y[curr_start_index - 400: curr_start_index - 200])
             end_volt = np.mean(sweep_y[curr_end_index - 200:curr_end_index])
+            if sweep_index == 0:
+                sag_peak = v_min
 
             if len(hyper_pol_input_res_array) < 1:
                 delta_sag = v_min - end_volt
                 sag_ratio = delta_sag / (v_min - base_volt)
-            if current_units == "nA":
-                hyper_pol_input_res_array.append((((end_volt - base_volt) * 1e-3) / (curr_diff * 1e-9)) / 1e6)
-            elif current_units == "pA":
-                hyper_pol_input_res_array.append((((end_volt - base_volt) * 1e-3) / (curr_diff * 1e-12)) / 1e6)
+            hyper_pol_input_res_array.append((((end_volt - base_volt) * 1e-3) / (curr_diff * 1e-12)) / 1e6)
         
             
         sweep_y_post_curr = sweep_y_raw[curr_start_index:curr_end_index]
@@ -207,8 +201,8 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
         average_input_res = np.mean(hyper_pol_input_res_array)
         print(f"Average Input Resistance (M{omega}): {average_input_res}")
         df[f"Average Input Resistance (Mega Ohms)"] = average_input_res
-        print(f"Sag Peak (mV): {v_min}")
-        df["Sag Peak (mV)"] = v_min
+        print(f"Sag Peak (mV): {sag_peak}")
+        df["Sag Peak (mV)"] = sag_peak
         print(f"Delta Sag (mV): {delta_sag}")
         df[f"Delta Sag (mV)"] = delta_sag
         print(f"Sag Ratio: {sag_ratio}")

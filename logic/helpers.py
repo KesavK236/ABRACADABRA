@@ -2,7 +2,8 @@ import pyabf
 from pynwb import NWBHDF5IO
 import numpy as np
 from scipy.signal import savgol_filter, butter, filtfilt, find_peaks
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import os
 from hampel import hampel
 from numpy.lib.stride_tricks import sliding_window_view
@@ -74,17 +75,19 @@ def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyor
     y_label = abf.sweepLabelY
     sweep_c = np.array(abf.sweepC)
     c_label = abf.sweepLabelC
+    current_units = abf.sweepUnitsC
     if current_record == -1:
         try:
             peaks = verify_current(abf, number_sweeps)
 
-            if protocol == "rheo" and peaks != 1 and peaks != -1 :
+            if protocol == "rheo" and peaks != 2 and peaks != -1 :
                 raise Exception("Channel 1 isn't current")
-            if protocol == "ramp" and peaks != 0 and peaks != -1:
+            if protocol == "ramp" and peaks != 1 and peaks != -1:
                 raise Exception("Channel 1 isn't current")
             abf.setSweep(sweep_num, channel=1)
             sweep_c = np.array(abf.sweepY)
             c_label = abf.sweepLabelY
+            current_units = abf.sweepUnitsY
             current_record = 1
             if "(nA)" and "(pA)" not in c_label:
                 raise Exception("Channel 1 isn't current")
@@ -97,14 +100,16 @@ def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyor
         abf.setSweep(sweep_num, channel=1)
         sweep_c = np.array(abf.sweepY)
         c_label = abf.sweepLabelY
+        current_units = abf.sweepUnitsY
     else:
         abf.setSweep(sweep_num, channel=0)
         sweep_c = np.array(abf.sweepC)
         c_label = abf.sweepLabelC
+        current_units = abf.sweepUnitsC
     
     sample_rate = abf.sampleRate
 
-    return number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, current_record
+    return number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, current_units,  current_record
 
 
 def verify_current(abf, number_sweeps):
@@ -115,19 +120,32 @@ def verify_current(abf, number_sweeps):
     abf.setSweep(sweep_num, channel=1)
     sweep_c = np.array(abf.sweepY)
     didt = np.gradient(sweep_c, sweep_x*1000)
-    didt_peak = max(didt)
-    if didt_peak < 500:
-        return -1
-    di_peaks, di_props = find_peaks(didt, 1000)
-    num_peaks = len(di_peaks)
-    end = np.argmin(didt)
-    # print(f"numpeaks {num_peaks}")
-    for i in range(len(di_peaks)):
-        if abs(di_peaks[i] - end) < 0.0005 * sample_rate:
-            num_peaks -= 1
-    #     print(f"peaks {di_peaks[i]} end {end}")
-    # print(f"numpeaks {num_peaks}")
-    return num_peaks
+    min = np.argmin(didt)
+    didt_peaks, _ = find_peaks(didt, 500)
+    adidt = abs(didt)
+    adidt_peaks, adidt_props = find_peaks(adidt, 500)
+    adidt_heights = adidt_props['peak_heights']
+    min_index = np.where(adidt_peaks==min)[0][0]
+    peak_window = adidt_peaks[:min_index]
+
+    refractory_period = 0.001 * sample_rate
+    peak_set = set()
+    peak_set.add(adidt_peaks[len(adidt_peaks)-1])
+    last_added = adidt_peaks[len(adidt_peaks)-1]
+    last_added_value = adidt_heights[len(adidt_peaks)-1]
+    for i in range(len(adidt_peaks)-2, -1, -1):
+        if last_added - adidt_peaks[i] < refractory_period:
+            if last_added_value < adidt_heights[i]:
+                peak_set.discard(last_added)
+                peak_set.add(adidt_peaks[i])
+                last_added = adidt_peaks[i]
+                last_added_value = adidt_heights[i]
+        else:
+            peak_set.add(adidt_peaks[i])
+            last_added = adidt_peaks[i]
+            last_added_value = adidt_heights[i]
+
+    return len(peak_set)
     
 
 
@@ -213,9 +231,9 @@ def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
         zero_sweep_bool = True
         sweep_c_stored = sweep_c
         try:
-            _, _, _, _, sweep_c, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
+            _, _, _, _, sweep_c, _, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
         except:
-            _, _, _, _, sweep_c, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
+            _, _, _, _, sweep_c, _, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
         sweep_c = butter_lowpass_filter(sweep_c, cutoff_hz=5000, fs_hz=sample_rate, order=4)
         sweep_c_base_smooth = savgol_filter(sweep_c, window_length=100, polyorder=3)
 
@@ -225,16 +243,16 @@ def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
     min = np.argmin(dadt)
     max = np.argmax(dadt)
     if min < max:
-        curr_start_index = min - 1
+        curr_start_index = min
         curr_end_index = max - 1 
     else:
-        curr_start_index = max -1 
+        curr_start_index = max 
         curr_end_index = min - 1  
     if zero_sweep_bool:
         sweep_c = sweep_c_stored
     holding_curr = np.mean(sweep_c[ 100 : curr_start_index - 100])
     middle_index = (curr_start_index + curr_end_index) // 2
-    stim_curr = np.mean(sweep_c[curr_start_index + 500 : curr_end_index - 500])
+    stim_curr = np.mean(sweep_c[curr_start_index + 10 : curr_end_index - 10])
     
     # plt.clf()
     # plt.plot(sweep_x, sweep_c)
@@ -248,9 +266,9 @@ def current_injection_points_ramp(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
     stim_diff = np.abs(np.max(sweep_stim) - np.min(sweep_stim))
     if stim_diff <= 0:
         try:
-            _, _, _, _, _, sweep_stim, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
+            _, _, _, _, _, sweep_stim, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
         except IndexError:
-            _, _, _, _, _, sweep_stim, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
+            _, _, _, _, _, sweep_stim, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
 
     sweep_c_base_smooth = savgol_filter(sweep_c, window_length=25, polyorder=3)
     sweep_c_roll_mean = rolling_mean(sweep_c_base_smooth, win=1001)
@@ -260,9 +278,9 @@ def current_injection_points_ramp(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
         zero_sweep_bool = True
         sweep_c_stored = sweep_c
         try:
-            _, _, _, _, sweep_c, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
+            _, _, _, _, sweep_c, _, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
         except:
-            _, _, _, _, sweep_c, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
+            _, _, _, _, sweep_c, _, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
         sweep_c = butter_lowpass_filter(sweep_c, cutoff_hz=5000, fs_hz=sample_rate, order=4)
         sweep_c_base_smooth = savgol_filter(sweep_c, window_length=25, polyorder=3)
         sweep_c_roll_mean = rolling_mean(sweep_c_base_smooth, win=1001)
@@ -349,9 +367,8 @@ def check_no_change(sweep_y_d, j, increasing):
     return 1
 
 def save_plot(x, y, xlabel, ylabel, title, filename, folder=None, markers=None):
-    plt.clf()
-    plt.grid()
-    ax = plt.subplot()
+    fig = Figure(figsize=(6, 4), dpi=200)
+    ax = fig.add_subplot(111)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.plot(x, y, alpha=0.5)
@@ -365,9 +382,10 @@ def save_plot(x, y, xlabel, ylabel, title, filename, folder=None, markers=None):
         path = os.path.join(folder, filename)
     else:
         path = filename
-
-    plt.title(title.split("/")[-1])
-    plt.savefig(path)
+    fig.suptitle(title.split("/")[-1])
+    FigureCanvas(fig)
+    fig.savefig(path)
+    fig.clear()
     return path
 
 def generate_derivatives(sweep_x, sweep_y, hampel_bool=False):
@@ -383,12 +401,12 @@ def generate_derivatives(sweep_x, sweep_y, hampel_bool=False):
 def is_ramp(filename):
     is_ramp_file = True
     sweep_num = 1
-    number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, _ = load_abf(file_name=filename, sweep_num=sweep_num)
+    number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, _,  _ = load_abf(file_name=filename, sweep_num=sweep_num)
     
     max_current = np.max(sweep_stim)
     min_current = np.min(sweep_stim)
     while max_current == 0 and min_current == 0:
-        number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, _ = load_abf(file_name=filename, sweep_num=sweep_num + 1, loaded=loaded)
+        number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, _, _ = load_abf(file_name=filename, sweep_num=sweep_num + 1, loaded=loaded)
         max_current = np.max(sweep_stim)
 
     sweep_stim_d = np.gradient(sweep_stim)
