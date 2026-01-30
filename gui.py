@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter.filedialog import askopenfilename, askdirectory
 import sys
 from logic.summary import callback
+from logic.bulk_summary import bulk_analysis
 from logic.nwb_conversion import convert_to_nwb
 from config_manager import load_config, save_config
 from PIL import ImageTk, Image
@@ -67,28 +68,50 @@ def launch_gui(root):
 
     def on_enter():
         run_button.config(state="disabled")
-        status_label.config(text="Running analysis...", fg="blue")
+        
         for i in range(6):
             error_labels[i].config(text="")
         root.update_idletasks()
-        try:
-            callback(
-                file_paths=filenames,
-                output_name=output_filename.get(),
-                dvdt=int(dvdt_value.get()),
-                verify_threshold=check_threshold.get(),
-                verify_ap_counts=check_ap_counts.get(),
-                open_excel = open_excel.get(),
-                open_phase = open_phase.get(),
-                status_label= status_label,
-                error_labels= error_labels,
-                root= root
-            )
-            
-        except Exception as e:
-            status_label.config(text=f"Error: {str(e)}", fg="red")
-        finally:
-            run_button.config(state="normal")
+        if process_bool.get():
+            status_label.config(text="Running Bulk Analysis...", fg="blue")
+            root.update_idletasks()
+            try:
+                bulk_analysis(
+                    folder_paths=foldernames,
+                    output_name=output_filename.get(),
+                    dvdt=int(dvdt_value.get()),
+                    verify_threshold=check_threshold.get(),
+                    verify_ap_counts=check_ap_counts.get(),
+                    open_excel = open_excel.get(),
+                    open_phase = open_phase.get(),
+                    status_label= status_label,
+                    error_labels= error_labels,
+                    root= root
+                )
+            except Exception as e:
+                status_label.config(text=f"Error: {str(e)}", fg="red")
+            finally:
+                run_button.config(state="normal")
+        else:
+            status_label.config(text="Running Single-Cell Analysis...", fg="blue")
+            root.update_idletasks()
+            try:
+                callback(
+                    file_paths=filenames,
+                    output_name=output_filename.get(),
+                    dvdt=int(dvdt_value.get()),
+                    verify_threshold=check_threshold.get(),
+                    verify_ap_counts=check_ap_counts.get(),
+                    open_excel = open_excel.get(),
+                    open_phase = open_phase.get(),
+                    status_label= status_label,
+                    error_labels= error_labels,
+                    root= root
+                )
+            except Exception as e:
+                status_label.config(text=f"Error: {str(e)}", fg="red")
+            finally:
+                run_button.config(state="normal")
 
     def on_convert():
         convert_button.config(state="disabled")
@@ -123,7 +146,7 @@ def launch_gui(root):
     
     # Title
     label_title = tk.Label(root, text="ABRACADABRA", font=("Verdana", 20))
-    label_title.grid(row=0, column=0, columnspan=5, pady=10, sticky='n')
+    label_title.grid(row=0, column=0, columnspan=6, pady=10, sticky='n')
 
     # single/ batch toggle
     single_label = tk.Label(root, text="Single-Cell Extraction", font=("Verdana", 14))
@@ -172,7 +195,7 @@ def launch_gui(root):
         file_labels.append(file_label)
 
         error_label = tk.Label(root, text="", font=("Verdana", 12), anchor="w", fg="red")
-        error_label.grid(row=i+2, column=5, padx=15)
+        error_label.grid(row=i+2, column=5, columnspan=2, padx=15)
         error_labels.append(error_label)
 
     # Spinbox and checkbuttons
@@ -183,7 +206,7 @@ def launch_gui(root):
     if "dvdt_value" in config:
         dvdt_value.set(int(config["dvdt_value"]))
     spinbox_dvdt = tk.Spinbox(root, from_=1, to=100, width=5, textvariable=dvdt_value, font=("Verdana", 12))
-    spinbox_dvdt.grid(row=9, column=3, sticky="w")
+    spinbox_dvdt.grid(row=9, column=3)
 
     check_threshold = tk.BooleanVar()
     if "check_threshold" in config:
@@ -211,28 +234,30 @@ def launch_gui(root):
 
     # Output Stuff
     output_label = tk.Label(root, text="Output File Name", font=("Verdana", 14))
-    output_label.grid(row=14, column=0, columnspan=5, sticky='s')
+    output_label.grid(row=14, column=0, columnspan=6, sticky='s')
     output_filename = tk.StringVar()
     output_entry = tk.Entry(root, textvariable=output_filename, width=40, justify="center", font=("Verdana", 12))
-    output_entry.grid(row=15, column=0, columnspan=5, sticky='s')
+    output_entry.grid(row=15, column=0, columnspan=6, sticky='s')
 
     run_button = tk.Button(root, text="Enter", width=15, bg="green", fg="black", font=("Verdana", 12), command=on_enter)
-    run_button.grid(row=16, column=0, columnspan=5, pady=10, sticky='s')
+    run_button.grid(row=16, column=0, columnspan=6, pady=10, sticky='s')
 
-    status_label = tk.Label(root, text="", fg="blue", font=("Verdana", 14))
+    status_label = tk.Label(root, text="", fg="blue", font=("Verdana", 14), wraplength=1000)
     status_label.grid(row=18, column=0, columnspan=6)
 
     convert_button = tk.Button(root, text="Convert to NWB", width=15, bg="orange", fg="black", font=("Verdana", 12), command=on_convert)
-    convert_button.grid(row=17, column=0, columnspan=5, pady=5, sticky='s')
+    convert_button.grid(row=17, column=0, columnspan=6, pady=5, sticky='s')
 
 
     # Adding weight to rows and columns
-    root.grid_columnconfigure(0, weight=0)
+    root.grid_columnconfigure(0, weight=0, minsize= 143)
     root.grid_columnconfigure(1, weight=0)  
     root.grid_columnconfigure(2, weight=0)  
-    root.grid_columnconfigure(3, weight=0)  
-    root.grid_columnconfigure(4, weight=0, minsize= 439)
+    root.grid_columnconfigure(3, weight=0, minsize= 142)  
+    root.grid_columnconfigure(4, weight=0, minsize= 429)
+    root.grid_columnconfigure(5, weight=0, minsize= 36)
+    root.grid_columnconfigure(6, weight=1)
 
-    root.grid_rowconfigure(11, weight=1)
+    root.grid_rowconfigure(10, weight=1)
     root.grid_rowconfigure(12, weight=0)
     root.grid_rowconfigure(13, weight=0)
