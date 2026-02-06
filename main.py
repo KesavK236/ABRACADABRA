@@ -2,6 +2,7 @@ import tkinter as tk
 from gui import launch_gui
 import sys
 import os
+import ctypes
 
 # pyinstaller main.py --clean --onefile --noconsole --icon=assets/ABRACADABRA.ico --hidden-import=hampel --name ABRACADABRA --noconfirm --collect-data hdmf --collect-data pynwb --collect-submodules hdmf --collect-submodules pynwb --collect-all neuroconv --collect-all ndx_dandi_icephys
 # Gets the relative paths for the output files
@@ -13,7 +14,9 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 if __name__ == "__main__":
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
     root = tk.Tk()
+    root.tk.call("tk", "scaling", 1.25)
     root.title("ABRACADABRA")
     root.geometry
 

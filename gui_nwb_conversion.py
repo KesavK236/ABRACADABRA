@@ -141,13 +141,13 @@ def nwb_conversion_input_window():
     entry_days_in_vitro = tk.Entry(convert_window, textvariable=days_in_vitro, font=('Verdana', 12), width=30)
     entry_days_in_vitro.grid(row=12, column=1)
 
-    label_preparation = tk.Label(convert_window, text="Tissue Preparation", font=('Verdana', 12))
+    label_preparation = tk.Label(convert_window, text="Tissue Preparation:", font=('Verdana', 12))
     label_preparation.grid(row=13, column=0)
 
     entry_preparation = tk.Entry(convert_window, textvariable=preparation, font=('Verdana', 12), width=30)
     entry_preparation.grid(row=13, column=1)
 
-    label_nwb_name = tk.Label(convert_window, text="NWB File Name", font=('Verdana', 12))
+    label_nwb_name = tk.Label(convert_window, text="NWB File Name:", font=('Verdana', 12))
     label_nwb_name.grid(row=14, column=0)
 
     entry_nwb_name = tk.Entry(convert_window, textvariable=nwb_name, font=('Verdana', 12), width=30)

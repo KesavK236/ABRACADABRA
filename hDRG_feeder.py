@@ -15,7 +15,7 @@ current_dir = os.getcwd()
 os.makedirs("testfeeder4", exist_ok=True)
 os.chdir("testfeeder4")
 dvdt = 20
-files = r"C:\Users\kesav\OneDrive\WashU\Copits Lab\ABRACADABRA Bulk\RK_hdrg_filepaths.xlsx"
+files = r"C:\Users\kesav\OneDrive\WashU\Copits Lab\ABRACADABRA Bulk\PG_hdrg_filepaths.xlsx"
 files_df = pd.read_excel(files)
 files_df
 e1 = []
@@ -90,7 +90,7 @@ for idx, row in files_df.iterrows():
     
     testdf = pd.concat([testdf, filedf], ignore_index=False, sort=False)
 testdf = testdf.transpose()
-testdf.to_csv(r"C:\Users\kesav\OneDrive\WashU\Copits Lab\ABRACADABRA Bulk\RK_hdrg_results20.csv")
+testdf.to_csv(r"C:\Users\kesav\OneDrive\WashU\Copits Lab\ABRACADABRA Bulk\PG_bench.csv")
 print(e1)
 print(e2)
 print(e3)
