@@ -5,6 +5,7 @@ from logic.summary import callback
 from logic.bulk_summary import bulk_analysis
 from logic.nwb_conversion import convert_to_nwb
 from config_manager import load_config, save_config
+from logic.multiprocess import multiprocess
 from PIL import ImageTk, Image
 
 filenames = ["No File Chosen"] * 6
@@ -76,16 +77,23 @@ def launch_gui(root):
             status_label.config(text="Running Bulk Analysis...", fg="blue")
             root.update_idletasks()
             try:
-                bulk_analysis(
+                # bulk_analysis(
+                #     folder_paths=foldernames,
+                #     output_name=output_filename.get(),
+                #     dvdt=int(dvdt_value.get()),
+                #     verify_threshold=check_threshold.get(),
+                #     verify_ap_counts=check_ap_counts.get(),
+                #     open_excel = open_excel.get(),
+                #     open_phase = open_phase.get(),
+                #     status_label= status_label,
+                #     error_labels= error_labels,
+                #     root= root
+                # )
+                multiprocess(
                     folder_paths=foldernames,
-                    output_name=output_filename.get(),
+                    output_dir=output_filename.get(),
                     dvdt=int(dvdt_value.get()),
-                    verify_threshold=check_threshold.get(),
-                    verify_ap_counts=check_ap_counts.get(),
-                    open_excel = open_excel.get(),
-                    open_phase = open_phase.get(),
                     status_label= status_label,
-                    error_labels= error_labels,
                     root= root
                 )
             except Exception as e:
