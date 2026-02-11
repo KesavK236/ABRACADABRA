@@ -46,17 +46,7 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
         ap_count = 0
         threshold_ram = 0
 
-        image_name = no_spaces(df.index[0]) + f"_rheo_{i+1}x_graph.png"
-        save_plot(
-            x=sweep_x,
-            y=sweep_y,
-            xlabel=x_label,
-            ylabel=y_label,
-            title=os.path.basename(image_name)[:-4],
-            filename=image_name,
-            folder=output_dir
-        )
-        image_names[i] = os.path.join(output_dir, image_name)
+        
         # fig, axs = plt.subplots(2, 1)
         # plt1 = axs[0]
         # plt2 = axs[1]
@@ -64,7 +54,7 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
         # plt.plot(sweep_x_d, sweep_y_d)
         # plt.show()
         dvdt = 10
- 
+        points = []
         while j < len(sweep_y_d) - 1:
             if sweep_y_d[j] >= dvdt and ap_found == 0 and finding_peak == 0:
                 # plt1.plot(sweep_x[j], sweep_y[j], 'ro')  # Mark the detected AP with a red dot
@@ -83,15 +73,28 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
                         dvdt = 5
                     finding_peak = 0
                     ap_count += 1
-
+                    points.append((sweep_x[j], sweep_y[j]))
             elif finding_peak == 0 and ap_found == 1 and sweep_y_d[j] > 0:
                 if check_no_change(sweep_y_d, j, increasing=False):
                     # plt1.plot(sweep_x_d[j], sweep_y_d[j], 'bo')  # Mark the end of the AP with a blue dot
                     # plt.plot(sweep_x_d[j], sweep_y_d[j], 'bo')
         
                     ap_found = 0
-
             j += 1
+
+        image_name = no_spaces(df.index[0]) + f"_rheo_{i+1}x_graph.png"
+        save_plot(
+            x=sweep_x,
+            y=sweep_y,
+            xlabel=x_label,
+            ylabel=y_label,
+            title=os.path.basename(image_name)[:-4],
+            filename=image_name,
+            folder=output_dir,
+            markers=points
+        )
+        image_names[i] = os.path.join(output_dir, image_name)
+            
 
         ap_counts[i] = ap_count
         holding_currs[i] = holding_curr

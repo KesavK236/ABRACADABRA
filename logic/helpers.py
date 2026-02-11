@@ -374,8 +374,8 @@ def save_plot(x, y, xlabel, ylabel, title, filename, folder=None, markers=None):
     ax.plot(x, y, alpha=0.5)
 
     if markers:
-        for (mx, my, style) in markers:
-            ax.plot(mx, my, **style)
+        for (mx, my) in markers:
+            ax.plot(mx, my, marker='o', markersize=3, color='green')
 
     if folder:
         os.makedirs(folder, exist_ok=True)
