@@ -8,6 +8,7 @@ from logic.ramp_1s import ramp_1s
 from logic.ramp_4x import ramp_4x
 from logic.short_rheo_5ms import short_rheo_5ms
 from logic.short_rheo_1s import short_rheo_1s
+import datetime
 
 
 
@@ -85,6 +86,7 @@ def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
     return task, df
 
 def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None):
+    print(f"Starting processing at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     tasks = []
     if folder_paths[0] != "No Folder":
         for f in list_abf_files(folder_paths[0]):
@@ -116,8 +118,8 @@ def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None
     ramp_4x_results = []
     short_rheo_5ms_results = []
 
-    max_workers = max(1, (os.cpu_count() or 1) - 1)
-
+    max_workers = max(1, (os.cpu_count() or 1))
+    print("started processing")
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         future_to_task = [executor.submit(run_task, task, output_dir) for task in tasks]
         for future in as_completed(future_to_task):
@@ -157,3 +159,4 @@ def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None
         short_rheo_5ms_df.to_csv(os.path.join(output_dir, "Short_Rheo_5ms_results.csv"))
     status_label.config(text=f"Processing Complete!", fg="green")
     root.update_idletasks()
+    print(f"Finished processing at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

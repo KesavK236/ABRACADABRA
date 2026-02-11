@@ -1,11 +1,12 @@
 import tkinter as tk
 from gui import launch_gui
+import multiprocessing
 import sys
 import os
 import ctypes
 
-# pyinstaller main.py --clean --onefile --noconsole --icon=assets/ABRACADABRA.ico --hidden-import=hampel --name ABRACADABRA --noconfirm --collect-data hdmf --collect-data pynwb --collect-submodules hdmf --collect-submodules pynwb --collect-all neuroconv --collect-all ndx_dandi_icephys
-# Gets the relative paths for the output files
+# pyinstaller main.py --clean --onefile --noconsole --icon=assets/ABRACADABRA.ico --hidden-import=hampel --name ABRACADABRA --noconfirm --collect-data hdmf --collect-data pynwb --collect-submodules hdmf --collect-submodules pynwb --collect-all neuroconv --collect-all ndx_dandi_icephys 
+
 def resource_path(relative_path):
     try:
         base_path = sys._MEIPASS
@@ -25,6 +26,8 @@ if __name__ == "__main__":
         root.iconbitmap(icon_path)
     except Exception:
         print("Icon Not found, continuing without it")
+
+    multiprocessing.freeze_support()
 
     launch_gui(root)
 
