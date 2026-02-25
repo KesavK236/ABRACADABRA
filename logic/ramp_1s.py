@@ -27,9 +27,9 @@ def ramp_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(
     threshold_checked = 0
 
     index_in_sweep = 0
-    i = 0
-    while i < num_sweep and threshold_checked == 0:
-        _, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded, protocol="ramp", current_record=current_record)
+    sweep_index = 0
+    while sweep_index < num_sweep and threshold_checked == 0:
+        _, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded, protocol="ramp", current_record=current_record)
         if not current_record:
             error_msg = "Current not recorded in Ramp 1s. Used Epoch instead."
         sweep_y_d, sweep_x_d, _, _ = generate_derivatives(sweep_x, sweep_y)
@@ -41,7 +41,7 @@ def ramp_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(
         elif "pA" in units:
                 current_units = "pA"
         
-        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_ramp(loaded, sample_rate, index_in_sweep, sweep_x, sweep_c, sweep_stim, current_units)
+        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_ramp(loaded, sample_rate, sweep_index, sweep_x, sweep_c, sweep_stim, current_units)
 
         ap_max = max(sweep_y)
         if ap_max > 0 and dvdt_max >= dvdt:
@@ -68,7 +68,7 @@ def ramp_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(
                 passed_check_func = 1
 
                 if threshold_checked == 0:
-                    i -=1
+                    sweep_index -=1
 
         if threshold_checked == 2:
             threshold_checked = 0
@@ -76,8 +76,8 @@ def ramp_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(
         
         
         if threshold_checked == 0:
-            i += 1
-    if i == num_sweep and threshold_checked == 0:
+            sweep_index += 1
+    if sweep_index == num_sweep and threshold_checked == 0:
         error_msg = "No Action Potential Detected in any sweep."
     
     
