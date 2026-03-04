@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from gui_ap_verify import ap_count_window
 
-def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd()):
+def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(), ap_count_window_callback=None):
     if is_ramp(file_name):
         raise Exception("Rheo_4x file is not a Rheostep")
 
@@ -101,7 +101,10 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
         stim_currs[i] = stim_curr   
 
     if check_ap_counts:
-        ap_counts[:] = ap_count_window(image_names, ap_counts)
+        if ap_count_window_callback is not None:
+            ap_counts[:] = ap_count_window_callback(ap_count_window, image_names, ap_counts)
+        else:
+            ap_counts[:] = ap_count_window(image_names, ap_counts)
 
     for i in range(num_sweeps):
         print(f"Holding Current at Rheo {i+1}x rheobase: {holding_currs[i]}")

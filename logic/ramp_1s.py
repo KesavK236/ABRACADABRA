@@ -6,7 +6,7 @@ from logic.helpers import (
     ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives, is_ramp
 )
 
-def ramp_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd()):
+def ramp_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(), threshold_window_callback=None):
 
     print("Ramp_1s Data:")
     df["Ramp 1s"] = None
@@ -64,7 +64,29 @@ def ramp_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(
                 threshold_time = sweep_x[threshold_index-curr_start_index] 
                 threshold_curr = sweep_c[threshold_index]
 
-                threshold_checked, upper_window, lower_window = check_thresh_window(check_threshold, upper_window, lower_window, sweep_x, sweep_y, threshold_index, curr_start_index, len(sweep_c) - 100)
+                if threshold_window_callback is not None:
+                    threshold_checked, upper_window, lower_window = threshold_window_callback(
+                        check_thresh_window,
+                        check_threshold,
+                        upper_window,
+                        lower_window,
+                        sweep_x,
+                        sweep_y,
+                        threshold_index,
+                        curr_start_index,
+                        len(sweep_c) - 100
+                    )
+                else:
+                    threshold_checked, upper_window, lower_window = check_thresh_window(
+                        check_threshold,
+                        upper_window,
+                        lower_window,
+                        sweep_x,
+                        sweep_y,
+                        threshold_index,
+                        curr_start_index,
+                        len(sweep_c) - 100
+                    )
                 passed_check_func = 1
 
                 if threshold_checked == 0:
