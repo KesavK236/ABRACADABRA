@@ -8,7 +8,7 @@ from logic.helpers import (
 from gui_ap_verify import ap_count_window
 import matplotlib.pyplot as plt
 
-def ramp_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd()):
+def ramp_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(), ap_count_window_callback=None):
     
     if not is_ramp(file_name):
         raise Exception("Ramp_4x file is not a Rheostep")
@@ -45,23 +45,8 @@ def ramp_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
         ap_count = 0
         threshold_ram = 0
 
-        image_name = no_spaces(df.index[0]) + f"_ramp_{i+1}x_graph.png"
-        save_plot(
-            x=sweep_x,
-            y=sweep_y,
-            xlabel=x_label,
-            ylabel=y_label,
-            title=os.path.basename(image_name)[:-4],
-            filename=image_name,
-            folder= output_dir
-        )
-        image_names[i] = os.path.join(output_dir, image_name)
-        # fig, axs = plt.subplots(2, 1)
-        # plt1 = axs[0]
-        # plt2 = axs[1]
-        # plt1.plot(sweep_x, sweep_y)
-        # plt2.plot(sweep_x_d, sweep_y_d)
         dvdt = 10
+        points = []
 
         while j < len(sweep_y_d) - 1 and j < curr_end_index - 20:
             if sweep_y_d[j] >= dvdt and ap_found == 0 and finding_peak == 0:
@@ -80,6 +65,7 @@ def ramp_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
                     if ap_count == 0:
                         dvdt = 4
                     ap_count += 1
+                    points.append((sweep_x[j], sweep_y[j]))
 
             elif finding_peak == 0 and ap_found == 1 and sweep_y_d[j] > 0:
                 if all(sweep_y_d[j + k] > 0 for k in range(10) if j + k < len(sweep_y_d)):
@@ -88,13 +74,34 @@ def ramp_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
                     ap_found = 0
 
             j += 1
+        
+        image_name = no_spaces(df.index[0]) + f"_ramp_{i+1}x_graph.png"
+        save_plot(
+            x=sweep_x,
+            y=sweep_y,
+            xlabel=x_label,
+            ylabel=y_label,
+            title=os.path.basename(image_name)[:-4],
+            filename=image_name,
+            folder= output_dir,
+            markers=points
+        )
+        image_names[i] = os.path.join(output_dir, image_name)
+        # fig, axs = plt.subplots(2, 1)
+        # plt1 = axs[0]
+        # plt2 = axs[1]
+        # plt1.plot(sweep_x, sweep_y)
+        # plt2.plot(sweep_x_d, sweep_y_d)
 
         ap_counts[i] = ap_count
         holding_currs[i] = holding_curr
         stim_currs[i] = stim_curr  
 
     if check_ap_counts:
-        ap_counts[:] = ap_count_window(image_names, ap_counts)
+        if ap_count_window_callback is not None:
+            ap_counts[:] = ap_count_window_callback(ap_count_window, image_names, ap_counts)
+        else:
+            ap_counts[:] = ap_count_window(image_names, ap_counts)
 
     for i in range(num_sweeps):
         print(f"Holding Current at Ramp {i+1}x rheobase: {holding_currs[i]}")

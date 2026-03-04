@@ -1,4 +1,7 @@
+import os
 import tkinter as tk
+import threading
+import queue
 from tkinter.filedialog import askopenfilename, askdirectory
 import sys
 from logic.summary import callback
@@ -8,10 +11,89 @@ from config_manager import load_config, save_config
 from logic.multiprocess import multiprocess
 from PIL import ImageTk, Image
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and PyInstaller """
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
+
+
 filenames = ["No File Chosen"] * 6
 foldernames = [""] * 6
 
 def launch_gui(root):
+    ui_queue = queue.Queue()
+
+    def invoke_on_main_thread(fn, *args, **kwargs):
+        if threading.current_thread() is threading.main_thread():
+            return fn(*args, **kwargs)
+
+        done = threading.Event()
+        result = {"value": None, "error": None}
+
+        def runner():
+            try:
+                result["value"] = fn(*args, **kwargs)
+            except Exception as e:
+                result["error"] = e
+            finally:
+                done.set()
+
+        root.after(0, runner)
+        done.wait()
+        if result["error"] is not None:
+            raise result["error"]
+        return result["value"]
+
+    def schedule_status(text, color="blue"):
+        ui_queue.put(("status", text, color))
+
+    def schedule_error(index, text):
+        ui_queue.put(("error", index, text))
+
+    def schedule_done(button, message=None, color="green"):
+        ui_queue.put(("done", button, message, color))
+
+    def schedule_failure(button, message):
+        ui_queue.put(("failure", button, message))
+
+    def process_ui_queue():
+        try:
+            while True:
+                event = ui_queue.get_nowait()
+                event_type = event[0]
+                if event_type == "status":
+                    _, text, color = event
+                    status_label.config(text=text, fg=color)
+                elif event_type == "error":
+                    _, index, text = event
+                    error_labels[index].config(text=text)
+                elif event_type == "done":
+                    _, button, message, color = event
+                    if message:
+                        status_label.config(text=message, fg=color)
+                    button.config(state="normal")
+                elif event_type == "failure":
+                    _, button, message = event
+                    status_label.config(text=f"Error: {message}", fg="red")
+                    button.config(state="normal")
+        except queue.Empty:
+            pass
+        root.after(100, process_ui_queue)
+
+    def start_background_task(button, worker):
+        button.config(state="disabled")
+
+        def run_worker():
+            try:
+                worker()
+                schedule_done(button)
+            except Exception as e:
+                schedule_failure(button, str(e))
+
+        threading.Thread(target=run_worker, daemon=True).start()
+
     def make_file_change_handler(index):
         def file_change():
             if process_bool.get():
@@ -68,73 +150,66 @@ def launch_gui(root):
                 clear_buttons[i].config(text="Clear File")
 
     def on_enter():
-        run_button.config(state="disabled")
-        
         for i in range(6):
             error_labels[i].config(text="")
-        root.update_idletasks()
         if process_bool.get():
             status_label.config(text="Running Bulk Analysis...", fg="blue")
-            root.update_idletasks()
-            try:
-                # bulk_analysis(
-                #     folder_paths=foldernames,
-                #     output_name=output_filename.get(),
-                #     dvdt=int(dvdt_value.get()),
-                #     verify_threshold=check_threshold.get(),
-                #     verify_ap_counts=check_ap_counts.get(),
-                #     open_excel = open_excel.get(),
-                #     open_phase = open_phase.get(),
-                #     status_label= status_label,
-                #     error_labels= error_labels,
-                #     root= root
-                # )
+
+            folder_paths = list(foldernames)
+            output_dir = output_filename.get()
+            dvdt = int(dvdt_value.get())
+
+            def bulk_worker():
+                # bulk_analysis(...) is intentionally left disabled here to preserve existing behavior.
                 multiprocess(
-                    folder_paths=foldernames,
-                    output_dir=output_filename.get(),
-                    dvdt=int(dvdt_value.get()),
-                    status_label= status_label,
-                    root= root
+                    folder_paths=folder_paths,
+                    output_dir=output_dir,
+                    dvdt=dvdt,
+                    status_callback=schedule_status
                 )
-            except Exception as e:
-                status_label.config(text=f"Error: {str(e)}", fg="red")
-            finally:
-                run_button.config(state="normal")
+
+            start_background_task(run_button, bulk_worker)
         else:
             status_label.config(text="Running Single-Cell Analysis...", fg="blue")
-            root.update_idletasks()
-            try:
+
+            file_paths = list(filenames)
+            output_name = output_filename.get()
+            dvdt = int(dvdt_value.get())
+            verify_threshold_value = check_threshold.get()
+            verify_ap_counts_value = check_ap_counts.get()
+            open_excel_value = open_excel.get()
+            open_phase_value = open_phase.get()
+
+            def single_worker():
                 callback(
-                    file_paths=filenames,
-                    output_name=output_filename.get(),
-                    dvdt=int(dvdt_value.get()),
-                    verify_threshold=check_threshold.get(),
-                    verify_ap_counts=check_ap_counts.get(),
-                    open_excel = open_excel.get(),
-                    open_phase = open_phase.get(),
-                    status_label= status_label,
-                    error_labels= error_labels,
-                    root= root
+                    file_paths=file_paths,
+                    output_name=output_name,
+                    dvdt=dvdt,
+                    verify_threshold=verify_threshold_value,
+                    verify_ap_counts=verify_ap_counts_value,
+                    open_excel=open_excel_value,
+                    open_phase=open_phase_value,
+                    status_callback=schedule_status,
+                    error_callback=schedule_error,
+                    threshold_window_callback=invoke_on_main_thread,
+                    ap_count_window_callback=invoke_on_main_thread
                 )
-            except Exception as e:
-                status_label.config(text=f"Error: {str(e)}", fg="red")
-            finally:
-                run_button.config(state="normal")
+
+            start_background_task(run_button, single_worker)
 
     def on_convert():
-        convert_button.config(state="disabled")
-        status_label.config(text="Converting to NWB...", fg="blue")
         for i in range(6):
             error_labels[i].config(text="")
-        root.update_idletasks()
-        try:
-            convert_to_nwb(file_names=filenames, output_folder=output_filename.get())
-        except Exception as e:
-            status_label.config(text=f"Error: {str(e)}", fg="red")
-        else:
-            status_label.config(text="NWB Conversion Complete!", fg="green")
-        finally:
-            convert_button.config(state="normal")
+        status_label.config(text="Converting to NWB...", fg="blue")
+
+        file_names = list(filenames)
+        output_folder = output_filename.get()
+
+        def convert_worker():
+            convert_to_nwb(file_names=file_names, output_folder=output_folder)
+            schedule_status("NWB Conversion Complete!", "green")
+
+        start_background_task(convert_button, convert_worker)
 
 
     def on_closing():
@@ -161,12 +236,14 @@ def launch_gui(root):
     batch_label = tk.Label(root, text="Batch Extraction", font=("Verdana", 14))
     single_label.grid(row=1, column=1, columnspan=2, pady=5, sticky='e')
     batch_label.grid(row=1, column=4, pady=5, sticky='w')
-
-    single_img_temp = Image.open("assets/single_switch.png")
+    
+    single_img_path = resource_path("assets/single_switch.png")
+    single_img_temp = Image.open(single_img_path)
     single_img_temp = single_img_temp.resize((65,26), Image.LANCZOS)
     single_img = ImageTk.PhotoImage(single_img_temp)
 
-    batch_img_temp = Image.open("assets/batch_switch.png")
+    batch_img_path = resource_path("assets/batch_switch.png")
+    batch_img_temp = Image.open(batch_img_path)
     batch_img_temp = batch_img_temp.resize((65,26), Image.LANCZOS)
     batch_img = ImageTk.PhotoImage(batch_img_temp)
 
@@ -269,3 +346,5 @@ def launch_gui(root):
     root.grid_rowconfigure(10, weight=1)
     root.grid_rowconfigure(12, weight=0)
     root.grid_rowconfigure(13, weight=0)
+
+    process_ui_queue()

@@ -10,9 +10,42 @@ import pandas as pd
 import numpy as np
 import re
 
-def callback(file_paths, output_name, dvdt, verify_threshold = False, verify_ap_counts = False, open_excel = False, open_phase = False, status_label  = None, error_labels = None, root = None):
+def callback(
+    file_paths,
+    output_name,
+    dvdt,
+    verify_threshold=False,
+    verify_ap_counts=False,
+    open_excel=False,
+    open_phase=False,
+    status_label=None,
+    error_labels=None,
+    root=None,
+    status_callback=None,
+    error_callback=None,
+    threshold_window_callback=None,
+    ap_count_window_callback=None
+):
     if not output_name:
         raise ValueError("Output file name cannot be empty.")
+
+    def set_status(text, color="blue"):
+        if status_callback is not None:
+            status_callback(text, color)
+            return
+        if status_label is not None:
+            status_label.config(text=text, fg=color)
+        if root is not None:
+            root.update_idletasks()
+
+    def set_error(index, text):
+        if error_callback is not None:
+            error_callback(index, str(text))
+            return
+        if error_labels is not None:
+            error_labels[index].config(text=str(text))
+        if root is not None:
+            root.update_idletasks()
 
     # Create output directory
     folder_name = output_name + "_outputs"
@@ -30,78 +63,89 @@ def callback(file_paths, output_name, dvdt, verify_threshold = False, verify_ap_
     no_file = "No File Chosen"
     if file_paths[0] != no_file:
         try:
-            if root != None:
-                status_label.config(text="Running RMP Protocol...", fg="blue")
-                root.update_idletasks()
+            set_status("Running RMP Protocol...", "blue")
             output_df, error_msg = rmp(file_paths[0], output_df, output_dir)
             if error_msg != "":
-                error_labels[0].config(text=error_msg)
-                root.update_idletasks()
+                set_error(0, error_msg)
         except Exception as e:
-            error_labels[0].config(text=e)
-            root.update_idletasks()
+            set_error(0, e)
     if file_paths[1] != no_file:
         try:
-            if root != None:
-                status_label.config(text="Running Rheo 1s Protocol...", fg="blue")
-                root.update_idletasks()
-            output_df, pp_1s, error_msg = short_rheo_1s(file_paths[1], output_df, dvdt, verify_threshold, output_dir)
+            set_status("Running Rheo 1s Protocol...", "blue")
+            output_df, pp_1s, error_msg = short_rheo_1s(
+                file_paths[1],
+                output_df,
+                dvdt,
+                verify_threshold,
+                output_dir,
+                threshold_window_callback=threshold_window_callback
+            )
             if error_msg != "":
-                error_labels[1].config(text=error_msg)
-                root.update_idletasks()
+                set_error(1, error_msg)
         except Exception as e:
-            error_labels[1].config(text=e)
-            root.update_idletasks()
+            set_error(1, e)
     if file_paths[2] != no_file:
         try:
-            if root != None:
-                status_label.config(text="Running Rheo 4x Protocol...", fg="blue")
-                root.update_idletasks()
-            output_df, error_msg = rheo_4x(file_paths[2], output_df, dvdt, verify_ap_counts, output_dir)
+            set_status("Running Rheo 4x Protocol...", "blue")
+            output_df, error_msg = rheo_4x(
+                file_paths[2],
+                output_df,
+                dvdt,
+                verify_ap_counts,
+                output_dir,
+                ap_count_window_callback=ap_count_window_callback
+            )
             if error_msg != "":
-                error_labels[2].config(text=error_msg)
-                root.update_idletasks()
+                set_error(2, error_msg)
         except Exception as e:
-            error_labels[2].config(text=e)
-            root.update_idletasks()
+            set_error(2, e)
     if file_paths[3] != no_file:
         try:
-            if root != None:
-                status_label.config(text="Running Ramp 1s Protocol...", fg="blue")
-                root.update_idletasks()
-            output_df, error_msg = ramp_1s(file_paths[3], output_df, dvdt, verify_threshold, output_dir)
+            set_status("Running Ramp 1s Protocol...", "blue")
+            output_df, error_msg = ramp_1s(
+                file_paths[3],
+                output_df,
+                dvdt,
+                verify_threshold,
+                output_dir,
+                threshold_window_callback=threshold_window_callback
+            )
             if error_msg != "":
-                error_labels[3].config(text=error_msg)
-                root.update_idletasks()
+                set_error(3, error_msg)
         except Exception as e:
-            error_labels[3].config(text=e)
-            root.update_idletasks()
+            set_error(3, e)
     if file_paths[4] != no_file:
         try:
-            if root != None:
-                status_label.config(text="Running Ramp 4x Protocol...", fg="blue")
-                root.update_idletasks()
-            output_df, error_msg = ramp_4x(file_paths[4], output_df, dvdt, verify_ap_counts, output_dir)
+            set_status("Running Ramp 4x Protocol...", "blue")
+            output_df, error_msg = ramp_4x(
+                file_paths[4],
+                output_df,
+                dvdt,
+                verify_ap_counts,
+                output_dir,
+                ap_count_window_callback=ap_count_window_callback
+            )
             if error_msg != "":
-                error_labels[4].config(text=error_msg)
-                root.update_idletasks()
+                set_error(4, error_msg)
         except Exception as e:
-            error_labels[4].config(text=e)
-            root.update_idletasks()
+            set_error(4, e)
     if file_paths[5] != no_file:
         try:
-            if root != None:
-                status_label.config(text="Running Single AP 5ms...", fg="blue")
-                root.update_idletasks()
-            output_df, pp_5ms, error_msg = short_rheo_5ms(file_paths[5], output_df, dvdt, verify_threshold, output_dir)
+            set_status("Running Single AP 5ms...", "blue")
+            output_df, pp_5ms, error_msg = short_rheo_5ms(
+                file_paths[5],
+                output_df,
+                dvdt,
+                verify_threshold,
+                output_dir,
+                threshold_window_callback=threshold_window_callback
+            )
             if error_msg != "":
-                error_labels[5].config(text=error_msg)
-                root.update_idletasks()
+                set_error(5, error_msg)
         except Exception as e:
-            error_labels[5].config(text=e)
-            root.update_idletasks()
+            set_error(5, e)
 
-    version = 1.0
+    version = 1.1
 
     print(f"ABRACADABRA Version: {version}")
     output_df["ABRACADABRA Version"] = version
@@ -134,10 +178,8 @@ def callback(file_paths, output_name, dvdt, verify_threshold = False, verify_ap_
             os.system("start EXCEL.EXE " + pp_1s)
     
     if error_msg == "":
-        status_label.config(text="Analysis complete.", fg="green")
-        root.update_idletasks()
+        set_status("Analysis complete.", "green")
     else:
-        status_label.config(text=error_msg, fg="red")
-        root.update_idletasks()
+        set_status(error_msg, "red")
 
     return output_path

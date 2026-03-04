@@ -5,7 +5,7 @@ import numpy as np
 from scipy.signal import find_peaks
 
 
-def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd()):
+def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(), threshold_window_callback=None):
     num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name)
 
     error_msg = ""
@@ -75,7 +75,29 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
                 threshold_time = sweep_x[threshold_index] 
                 threshold_curr = sweep_c[curr_start_index + 5]
 
-                threshold_checked, upper_window, lower_window = check_thresh_window(check_threshold, upper_window, lower_window, sweep_x, sweep_y, threshold_index, curr_start_index, len(sweep_c) - 100)
+                if threshold_window_callback is not None:
+                    threshold_checked, upper_window, lower_window = threshold_window_callback(
+                        check_thresh_window,
+                        check_threshold,
+                        upper_window,
+                        lower_window,
+                        sweep_x,
+                        sweep_y,
+                        threshold_index,
+                        curr_start_index,
+                        len(sweep_c) - 100
+                    )
+                else:
+                    threshold_checked, upper_window, lower_window = check_thresh_window(
+                        check_threshold,
+                        upper_window,
+                        lower_window,
+                        sweep_x,
+                        sweep_y,
+                        threshold_index,
+                        curr_start_index,
+                        len(sweep_c) - 100
+                    )
                 passed_check_func = 1
             else:
                 sweep_index += 1

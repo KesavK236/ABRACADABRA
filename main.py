@@ -5,7 +5,7 @@ import sys
 import os
 import ctypes
 
-# pyinstaller main.py --clean --onefile --noconsole --icon=assets/ABRACADABRA.ico --hidden-import=hampel --name ABRACADABRA --noconfirm --collect-data hdmf --collect-data pynwb --collect-submodules hdmf --collect-submodules pynwb --collect-all neuroconv --collect-all ndx_dandi_icephys 
+# pyinstaller main.py --clean --onefile --noconsole --icon=assets/ABRACADABRA.ico --hidden-import=hampel --name ABRACADABRA --noconfirm --add-data "assets;assets" --collect-data hdmf --collect-data pynwb --collect-submodules hdmf --collect-submodules pynwb --collect-all neuroconv --collect-all ndx_dandi_icephys 
 
 def resource_path(relative_path):
     try:

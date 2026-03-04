@@ -85,7 +85,16 @@ def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
 
     return task, df
 
-def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None):
+def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None, status_callback=None):
+    def set_status(text, color="blue"):
+        if status_callback is not None:
+            status_callback(text, color)
+            return
+        if status_label is not None:
+            status_label.config(text=text, fg=color)
+        if root is not None:
+            root.update_idletasks()
+
     print(f"Starting processing at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     tasks = []
     if folder_paths[0] != "No Folder":
@@ -108,8 +117,7 @@ def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None
             tasks.append({"file_path": f, "protocol": "Short Rheo 5ms", "dvdt": dvdt})
     length = len(tasks)
     analyzed = 0
-    status_label.config(text=f"Processed {analyzed}/{length} files...", fg="blue")
-    root.update_idletasks()
+    set_status(f"Processed {analyzed}/{length} files...", "blue")
 
     rmp_results = []
     rheo_1s_results = []
@@ -137,8 +145,7 @@ def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None
             elif task["protocol"] == "Short Rheo 5ms":
                 short_rheo_5ms_results.append(result_df)
             analyzed += 1
-            status_label.config(text=f"Processed {analyzed}/{length} files...", fg="blue")
-            root.update_idletasks()
+            set_status(f"Processed {analyzed}/{length} files...", "blue")
     if rmp_results:
         rmp_df = pd.concat(rmp_results, ignore_index=False, sort=False).sort_index()
         rmp_df.to_csv(os.path.join(output_dir, "RMP_results.csv"))
@@ -157,6 +164,5 @@ def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None
     if short_rheo_5ms_results:
         short_rheo_5ms_df = pd.concat(short_rheo_5ms_results, ignore_index=False, sort=False).sort_index()
         short_rheo_5ms_df.to_csv(os.path.join(output_dir, "Short_Rheo_5ms_results.csv"))
-    status_label.config(text=f"Processing Complete!", fg="green")
-    root.update_idletasks()
+    set_status("Processing Complete!", "green")
     print(f"Finished processing at {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
