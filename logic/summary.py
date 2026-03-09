@@ -1,5 +1,4 @@
 from logic.rmp import rmp
-from logic.rheo_1s import rheo_1s
 from logic.rheo_4x import rheo_4x
 from logic.ramp_1s import ramp_1s
 from logic.ramp_4x import ramp_4x
