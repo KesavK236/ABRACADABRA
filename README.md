@@ -3,7 +3,7 @@ Axon Binary Reading Analyzer Capable of Analyzing Data as an Axon Binary Reading
 
 ## Description
 
-An application that automates electrophysiological feature extraction from current clamp recordings in Axon Binary Files. It is protocol-defined, meaning its built around certaint 
+An application that automates electrophysiological feature extraction from current clamp recordings in Axon Binary Files.
 
 ## Getting Started
 
