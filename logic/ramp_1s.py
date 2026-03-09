@@ -1,12 +1,40 @@
 import os
 import numpy as np
 from gui_check_threshold import check_thresh_window
-from logic.helpers import (
-    load_abf, num_sweeps, current_injection_points_ramp, 
-    ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives, is_ramp
+from logic.processing import (
+    ap_curr_and_time,
+    current_injection_points_ramp,
+    generate_derivatives,
+    is_ramp,
+    load_abf,
+    num_sweeps,
 )
+from logic.utils import adjust_units, no_spaces, save_plot
 
 def ramp_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(), threshold_window_callback=None):
+    """Analyze Ramp 1s protocol data from an ABF file.
+
+    Parameters
+    ----------
+    file_name : str
+        Path to the ABF file containing Ramp 1s protocol data.
+    df : pandas.DataFrame
+        Output DataFrame to update with extracted metrics.
+    dvdt : float, optional
+        dV/dt threshold used for AP detection.
+    check_threshold : bool, optional
+        Whether to show the threshold verification window.
+    output_dir : str, optional
+        Directory for generated plots and output files.
+    threshold_window_callback : callable, optional
+        Optional bridge for opening threshold-verification UI on the main thread.
+
+    Returns
+    -------
+    tuple
+        ``(df, error_msg)`` where ``df`` is the updated DataFrame and
+        ``error_msg`` is an error string (empty when no error is reported).
+    """
 
     print("Ramp_1s Data:")
     df["Ramp 1s"] = None

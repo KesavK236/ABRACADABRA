@@ -1,14 +1,21 @@
-import pyabf
-from pynwb import NWBHDF5IO
 import numpy as np
-from scipy.signal import savgol_filter, butter, filtfilt, find_peaks
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import os
+import pyabf
 from hampel import hampel
-from numpy.lib.stride_tricks import sliding_window_view
+from scipy.signal import find_peaks, savgol_filter
 
-def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyorder=3, loaded=None, protocol="rheo", current_record = -1):
+from .filters import butter_lowpass_filter, rolling_mean
+
+
+def load_abf(
+    file_name=None,
+    sweep_num=0,
+    smooth=False,
+    window_length=25,
+    polyorder=3,
+    loaded=None,
+    protocol="rheo",
+    current_record=-1,
+):
     """
     Loads the ABF into arrays and features depending on sweep index.
 
@@ -58,7 +65,7 @@ def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyor
             The sample rate of the ABF recording.
     """
 
-    if loaded == None:
+    if loaded is None:
         abf = pyabf.ABF(file_name)
     else:
         abf = loaded
@@ -80,7 +87,7 @@ def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyor
         try:
             peaks = verify_current(abf, number_sweeps)
 
-            if protocol == "rheo" and peaks != 2 and peaks != -1 :
+            if protocol == "rheo" and peaks != 2 and peaks != -1:
                 raise Exception("Channel 1 isn't current")
             if protocol == "ramp" and peaks != 1 and peaks != -1:
                 raise Exception("Channel 1 isn't current")
@@ -91,7 +98,7 @@ def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyor
             current_record = 1
             if "(nA)" and "(pA)" not in c_label:
                 raise Exception("Channel 1 isn't current")
-        except:
+        except Exception:
             abf.setSweep(sweep_num, channel=0)
             sweep_c = np.array(abf.sweepC)
             c_label = abf.sweepLabelC
@@ -106,34 +113,59 @@ def load_abf(file_name=None, sweep_num=0, smooth=False, window_length=25, polyor
         sweep_c = np.array(abf.sweepC)
         c_label = abf.sweepLabelC
         current_units = abf.sweepUnitsC
-    
+
     sample_rate = abf.sampleRate
 
-    return number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, current_units,  current_record
+    return (
+        number_sweeps,
+        sweep_x,
+        sweep_y,
+        sweep_y_raw,
+        sweep_c,
+        sweep_stim,
+        x_label,
+        y_label,
+        c_label,
+        loaded,
+        sample_rate,
+        current_units,
+        current_record,
+    )
 
 
 def verify_current(abf, number_sweeps):
+    """Verify whether the current is recorded in Channel 1 or to use the epoch table for current.
+    Parameters
+    ----------
+    abf : ABF object
+        The loaded ABF object.
+    number_sweeps : int
+        The number of sweeps in the ABF.
+    Returns
+    -------
+    int
+        The number of peaks in the current derivative sweep, or -1 if an error occurs.
+    """
     sample_rate = abf.dataRate
     sweep_num = number_sweeps - 1
     abf.setSweep(sweep_num, channel=0)
     sweep_x = np.array(abf.sweepX)
     abf.setSweep(sweep_num, channel=1)
     sweep_c = np.array(abf.sweepY)
-    didt = np.gradient(sweep_c, sweep_x*1000)
-    min = np.argmin(didt)
-    didt_peaks, _ = find_peaks(didt, 500)
+    didt = np.gradient(sweep_c, sweep_x * 1000)
+    min_idx = np.argmin(didt)
     adidt = abs(didt)
     adidt_peaks, adidt_props = find_peaks(adidt, 500)
-    adidt_heights = adidt_props['peak_heights']
-    min_index = np.where(adidt_peaks==min)[0][0]
-    peak_window = adidt_peaks[:min_index]
+    adidt_heights = adidt_props["peak_heights"]
+    min_index = np.where(adidt_peaks == min_idx)[0][0]
+    _ = adidt_peaks[:min_index]
 
     refractory_period = 0.001 * sample_rate
     peak_set = set()
-    peak_set.add(adidt_peaks[len(adidt_peaks)-1])
-    last_added = adidt_peaks[len(adidt_peaks)-1]
-    last_added_value = adidt_heights[len(adidt_peaks)-1]
-    for i in range(len(adidt_peaks)-2, -1, -1):
+    peak_set.add(adidt_peaks[len(adidt_peaks) - 1])
+    last_added = adidt_peaks[len(adidt_peaks) - 1]
+    last_added_value = adidt_heights[len(adidt_peaks) - 1]
+    for i in range(len(adidt_peaks) - 2, -1, -1):
         if last_added - adidt_peaks[i] < refractory_period:
             if last_added_value < adidt_heights[i]:
                 peak_set.discard(last_added)
@@ -146,77 +178,38 @@ def verify_current(abf, number_sweeps):
             last_added_value = adidt_heights[i]
 
     return len(peak_set)
-    
 
-
-
-# def load_nwb(file_name, sweep_num=0, smooth=False, window_length=25, polyorder=3, loaded=None):
-#     if loaded == None:
-#         io = NWBHDF5IO(file_name, 'r')
-#         nwbfile = io.read()
-#     else:
-#         nwbfile = loaded
-#     stim_series = list(nwbfile.stimulus.values())[sweep_num]
-#     sweep_c = stim_series.data[:]
-#     acq_series = list(nwbfile.acquisition.values())[sweep_num]
-#     sweep_y = acq_series.data[:]
-#     sampling_rate = stim_series.rate
-#     max_time = len(sweep_y)/ sampling_rate
-#     sweep_x= np.linspace(0, max_time, num=len(sweep_y))
-#     number_sweeps = len(list(nwbfile.acquisition.values()))
-#     x_label = "Time (s)"
-#     y_label = f"Voltage ({acq_series.unit})"
-#     c_label = f"Current ({stim_series.unit})"
-
-#     if smooth:
-#         sweep_y = savgol_filter(sweep_y, window_length=window_length, polyorder=polyorder)
-
-#     return number_sweeps, sweep_x, sweep_y, sweep_c, x_label, y_label, c_label, loaded
 
 def num_sweeps(abf):
     return abf.sweepCount
 
-def std_threshold_smoother(x, win=51, std_thresh=50):
+
+def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c, units="pA"):
     """
-    Smooths toward local mean if the window is stable.
-    
-    x          : 1D numpy array
-    win        : window size (odd number)
-    std_thresh : maximum std allowed to apply smoothing
-    
-    Returns a new 1D array.
+    Identifies the start and end indices of current injection in a Rheo protocol sweeps.
+    Parameters
+    ----------
+    abf : ABF object
+        The loaded ABF object.
+    sample_rate : float
+        The sampling rate of the ABF recording in Hz.
+    sweep_ind : int
+        The index of the sweep being analyzed.
+    sweep_x : 1D numpy array
+        The time points of the sweep in seconds.
+    sweep_c : 1D numpy array
+        The current values of the sweep in pA or nA.
+    units : str, optional
+        The units of the current values ("pA" or "nA"). Default is "pA".
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - curr_start_index (int): The index where current injection starts.
+        - curr_end_index (int): The index where current injection ends.
+        - holding_curr (float): The average holding current before injection.
+        - stim_curr (float): The average stimulus current during injection.
     """
-    if win % 2 == 0:
-        raise ValueError("win must be odd")
-    half = win // 2
-    n = len(x)
-    y = np.copy(x)
-    
-    for i in range(n):
-        lo = max(0, i - half)
-        hi = min(n, i + half + 1)
-        seg = x[lo:hi]
-        if np.std(seg) <= std_thresh:
-            y[i] = np.mean(seg)  # flatten small variation
-        # else: keep original (preserve big shifts)
-    return y
-
-def rolling_mean(x, win):
-    # x: 1D numpy array
-    # win: window size
-    windows = sliding_window_view(x, win)
-    means = windows.mean(axis=1)
-    # pad ends with NaN or extend nearest value
-    return np.concatenate(([means[0]]*(win//2), means, [means[-1]]*(win//2)))
-
-def butter_lowpass_filter(x, cutoff_hz, fs_hz, order=4):
-    # Normalize cutoff: Wn is relative to Nyquist (fs/2)
-    wn = cutoff_hz / (0.5 * fs_hz)
-    b, a = butter(order, wn, btype="low")
-    return filtfilt(b, a, x)
-
-
-def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c, units="pA"):  
     if units == "nA":
         sweep_c = sweep_c * 1e3
     elif units == "A":
@@ -232,36 +225,56 @@ def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
         sweep_c_stored = sweep_c
         try:
             _, _, _, _, sweep_c, _, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
-        except:
+        except Exception:
             _, _, _, _, sweep_c, _, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
         sweep_c = butter_lowpass_filter(sweep_c, cutoff_hz=5000, fs_hz=sample_rate, order=4)
         sweep_c_base_smooth = savgol_filter(sweep_c, window_length=100, polyorder=3)
 
-    curr_start_index = 0
     dadt = np.diff(sweep_c) / (1000 * np.diff(sweep_x))
-    
-    min = np.argmin(dadt)
-    max = np.argmax(dadt)
-    if min < max:
-        curr_start_index = min
-        curr_end_index = max - 1 
+
+    min_idx = np.argmin(dadt)
+    max_idx = np.argmax(dadt)
+    if min_idx < max_idx:
+        curr_start_index = min_idx
+        curr_end_index = max_idx - 1
     else:
-        curr_start_index = max 
-        curr_end_index = min - 1  
+        curr_start_index = max_idx
+        curr_end_index = min_idx - 1
     if zero_sweep_bool:
         sweep_c = sweep_c_stored
-    holding_curr = np.mean(sweep_c[ 100 : curr_start_index - 100])
-    middle_index = (curr_start_index + curr_end_index) // 2
+    holding_curr = np.mean(sweep_c[100 : curr_start_index - 100])
     stim_curr = np.mean(sweep_c[curr_start_index + 10 : curr_end_index - 10])
-    
-    # plt.clf()
-    # plt.plot(sweep_x, sweep_c)
-    # plt.plot(sweep_x[curr_start_index], sweep_c[curr_start_index], 'ro')
-    # plt.plot(sweep_x[curr_end_index], sweep_c[curr_end_index], 'go')
-    # plt.show()
+
     return curr_start_index, curr_end_index, holding_curr, stim_curr
 
+
 def current_injection_points_ramp(abf, sample_rate, sweep_ind, sweep_x, sweep_c, sweep_stim, units="pA"):
+    """
+    Identifies the start and end indices of current injection in a Ramp protocol sweeps.
+    Parameters
+    ----------
+    abf : ABF object
+        The loaded ABF object.
+    sample_rate : float
+        The sampling rate of the ABF recording in Hz.
+    sweep_ind : int
+        The index of the sweep being analyzed.
+    sweep_x : 1D numpy array
+        The time points of the sweep in seconds.
+    sweep_c : 1D numpy array
+        The current values of the sweep in pA or nA.
+    units : str, optional
+        The units of the current values ("pA" or "nA"). Default is "pA".
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - curr_start_index (int): The index where current injection starts.
+        - curr_end_index (int): The index where current injection ends.
+        - holding_curr (float): The average holding current before injection.
+        - stim_curr (float): The average stimulus current during injection.
+    """
+    _ = units
     zero_sweep_bool = False
     stim_diff = np.abs(np.max(sweep_stim) - np.min(sweep_stim))
     if stim_diff <= 0:
@@ -279,13 +292,13 @@ def current_injection_points_ramp(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
         sweep_c_stored = sweep_c
         try:
             _, _, _, _, sweep_c, _, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind + 1, loaded=abf)
-        except:
+        except Exception:
             _, _, _, _, sweep_c, _, _, _, _, _, _, _, _ = load_abf(sweep_num=sweep_ind - 1, loaded=abf)
         sweep_c = butter_lowpass_filter(sweep_c, cutoff_hz=5000, fs_hz=sample_rate, order=4)
         sweep_c_base_smooth = savgol_filter(sweep_c, window_length=25, polyorder=3)
         sweep_c_roll_mean = rolling_mean(sweep_c_base_smooth, win=1001)
 
-
+    _ = sweep_c_roll_mean
     stim_didt = np.gradient(sweep_stim)
     didt_min = np.argmin(stim_didt)
     didt_max = np.argmax(stim_didt)
@@ -293,15 +306,12 @@ def current_injection_points_ramp(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
     while sweep_stim[i] == 0:
         i += 1
     stim_start = sweep_x[i]
-    stim_start_index = i
+    _ = stim_start
     if didt_max < didt_min:
         stim_end = sweep_x[didt_min]
-        stim_end_index = didt_min
     else:
         stim_end = sweep_x[didt_max]
-        stim_end_index = didt_max
-    stim_length = stim_end - stim_start
-    
+    stim_length = stim_end - sweep_x[i]
 
     sample_rate = abf.dataRate
     didt = np.gradient(sweep_c, sweep_x)
@@ -310,7 +320,7 @@ def current_injection_points_ramp(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
 
     current_start_time = current_end_time - stim_length
     current_start_index = int(current_start_time * sample_rate)
-    
+
     if zero_sweep_bool:
         sweep_c = sweep_c_stored
 
@@ -319,18 +329,52 @@ def current_injection_points_ramp(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
 
     return current_start_index, current_end_index, holding_curr, stim_curr
 
-def ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index, curr_end_indx, dvdt, sample_rate):
+
+def ap_curr_and_time(
+    sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start_index, curr_end_indx, dvdt, sample_rate
+):
+    """Determines the current, voltage, and time of threshold if an action potential occured
+    Parameters
+    ----------
+    sweep_x : 1D numpy array
+        The time points of the sweep in seconds.
+    sweep_y : 1D numpy array
+        The voltage values of the sweep in mV.
+    sweep_c : 1D numpy array
+        The current values of the sweep in pA or nA.
+    sweep_y_d : 1D numpy array
+        The first derivative of the voltage sweep.
+    sweep_x_d : 1D numpy array
+        The time points corresponding to the first derivative of the voltage sweep.
+    curr_start_index : int
+        The index where current injection starts.
+    curr_end_indx : int
+        The index where current injection ends.
+    dvdt : float
+        The threshold for the first derivative to determine if an action potential occurred.
+    sample_rate : float
+        The sampling rate of the ABF recording in Hz.
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - ap_bool (bool): Whether an action potential was detected.
+        - current_threshold (float): The current at which the action potential threshold was crossed.
+        - rheobase (float): The difference between the current threshold and the holding current.
+        - ap_delay (float): The time delay from the start of current injection to the action potential threshold crossing.
+        - voltage_threshold (float): The voltage at which the action potential threshold was crossed.
+    """
     j = curr_start_index
-    resting_current = sweep_c[j-10]
+    resting_current = sweep_c[j - 10]
     ap_bool = 0
     current_threshold = 0
     rheobase = 0
     ap_delay = 0
     threshold_dvdt = int(dvdt)
     voltage_threshold = 0
-    end_buffer = int(0.002 * sample_rate)
+    _ = int(0.002 * sample_rate)
     # maybe need to add a extra check to ensure this is an action potential
-    while j < curr_end_indx  and ap_bool == 0:
+    while j < curr_end_indx and ap_bool == 0:
         if sweep_y_d[j] > threshold_dvdt:
             ap_bool = 1
             current_threshold = sweep_c[j]
@@ -342,71 +386,83 @@ def ap_curr_and_time(sweep_x, sweep_y, sweep_c, sweep_y_d, sweep_x_d, curr_start
 
     return ap_bool, current_threshold, rheobase, ap_delay, voltage_threshold
 
+
 def get_max(sweep_x, sweep_y, max_index, sampling_rate, delta=0.00001):
+    """Calulates the maximum voltage of the action potential by taking the mean of the voltage values around the peak to account for noise.
+    Parameters
+    ----------
+    sweep_x : 1D numpy array
+        The time points of the sweep in seconds.
+    sweep_y : 1D numpy array
+        The voltage values of the sweep in mV.
+    max_index : int
+        The index of the peak of the action potential.
+    sampling_rate : float
+        The sampling rate of the ABF recording in Hz.
+    delta : float, optional
+        The time window in seconds around the peak to average for the maximum voltage calculation. Default is 0.00001 seconds (10 ms).
+    Returns
+    -------
+    float
+        The calculated maximum voltage of the action potential.
+    """
     lower_bound_index = int((sweep_x[max_index] - delta) * sampling_rate)
     upper_bound_index = int((sweep_x[max_index] + delta) * sampling_rate)
     max_array = sweep_y[lower_bound_index:upper_bound_index]
     peak = np.mean(max_array)
     return peak
 
-def adjust_units(num, figs = 3):
-    num = num * 1000
-    return round(num, figs)
-
-def no_spaces(name):
-    return name.replace(' ', '_')
-
-def check_no_change(sweep_y_d, j, increasing):
-    for i in range(10):
-        if j + i >= len(sweep_y_d):
-            break
-        if sweep_y_d[j + i] > 0 and increasing:
-            return 0
-        elif sweep_y_d[j + i] < 0 and not increasing:
-            return 0
-    return 1
-
-def save_plot(x, y, xlabel, ylabel, title, filename, folder=None, markers=None):
-    fig = Figure(figsize=(6, 4), dpi=200)
-    ax = fig.add_subplot(111)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.plot(x, y, alpha=0.5)
-
-    if markers:
-        for (mx, my) in markers:
-            ax.plot(mx, my, marker='o', markersize=3, color='green')
-
-    if folder:
-        os.makedirs(folder, exist_ok=True)
-        path = os.path.join(folder, filename)
-    else:
-        path = filename
-    fig.suptitle(title.split("/")[-1])
-    FigureCanvas(fig)
-    fig.savefig(path)
-    fig.clear()
-    return path
 
 def generate_derivatives(sweep_x, sweep_y, hampel_bool=False):
+    """Generates the first and second derivatives of the voltage sweep.
+    Parameters
+    ----------
+    sweep_x : 1D numpy array
+        The time points of the sweep in seconds.
+    sweep_y : 1D numpy array
+        The voltage values of the sweep in mV.
+    hampel_bool : bool, optional
+        Whether to apply a Hampel filter to the first derivative to remove outliers. Default is False.
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - sweep_y_d (1D numpy array): The first derivative of the voltage sweep.
+        - sweep_x_d (1D numpy array): The time points corresponding to the first derivative of the voltage sweep.
+        - sweep_y_d2 (1D numpy array): The second derivative of the voltage sweep
+        - sweep_x_d2 (1D numpy array): The time points corresponding to the second derivative of the voltage sweep.
+        """
     sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
     sweep_x_d = sweep_x[1:]
-    if hampel_bool == True:
+    if hampel_bool is True:
         sweep_y_d = hampel(sweep_y_d, window_size=5, n_sigma=3.0).filtered_data
 
     sweep_y_d2 = np.diff(sweep_y_d) / (1000 * np.diff(sweep_x_d))
     sweep_x_d2 = sweep_x_d[1:]
     return sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2
 
+
 def is_ramp(filename):
+    """Determines whether the given ABF file is a Ramp protocol by checking for a change in the stimulus current.
+    Parameters
+    ----------
+    filename : str
+        The filepath of the ABF file to check.
+    Returns
+    -------
+    bool
+        True if the file is a Ramp protocol, False otherwise.
+    """
     is_ramp_file = True
     sweep_num = 1
-    number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, _,  _ = load_abf(file_name=filename, sweep_num=sweep_num)
-    
+    _, sweep_x, _, _, _, sweep_stim, _, _, _, loaded, _, _, _ = load_abf(file_name=filename, sweep_num=sweep_num)
+
     max_current = np.max(sweep_stim)
     min_current = np.min(sweep_stim)
     while max_current == 0 and min_current == 0:
-        number_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim, x_label, y_label, c_label, loaded, sample_rate, _, _ = load_abf(file_name=filename, sweep_num=sweep_num + 1, loaded=loaded)
+        _, sweep_x, _, _, _, sweep_stim, _, _, _, loaded, _, _, _ = load_abf(
+            file_name=filename, sweep_num=sweep_num + 1, loaded=loaded
+        )
         max_current = np.max(sweep_stim)
 
     sweep_stim_d = np.gradient(sweep_stim)
@@ -414,31 +470,8 @@ def is_ramp(filename):
     while sweep_stim[i] == 0 and i < len(sweep_stim):
         i += 1
 
-
     if sweep_stim_d[i + 500] == 0:
         is_ramp_file = False
     else:
         is_ramp_file = True
     return is_ramp_file
-
-def phase_plane(x, y, yd, df, step, output_dir):
-
-    dfname = df.index[0]
-    if step == "5ms":
-        file_name = dfname + "_5ms_phase_plane"
-        title = dfname + "5ms Phase Plane Plot"
-
-    if step == "1s":
-        file_name = dfname+ "_1s_phase_plane"
-        title = dfname+ "1s Phase Plane Plot"
-    
-    table_file = os.path.join(output_dir, file_name + ".csv" )
-
-    with open(table_file, 'w') as g:
-        g.write("Time (s), Voltage (mV), dV/dt (mv/ms) \n")
-        for i in range(len(yd)):
-            g.write(f"{x[i]}, {y[i]}, {yd[i]} \n")
-    
-    save_plot(y[:-1], yd, "Volage (mV)", "dV/dt (mV/ms)", title, file_name + ".png", folder=os.path.dirname(table_file))
-
-    return table_file

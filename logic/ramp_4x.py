@@ -1,14 +1,41 @@
 import os
 import numpy as np
-from logic.helpers import (
-    load_abf, generate_derivatives, current_injection_points_ramp,
-    ap_curr_and_time, adjust_units, no_spaces, save_plot, is_ramp
+from logic.processing import (
+    ap_curr_and_time,
+    current_injection_points_ramp,
+    generate_derivatives,
+    is_ramp,
+    load_abf,
 )
+from logic.utils import adjust_units, no_spaces, save_plot
 
 from gui_ap_verify import ap_count_window
 import matplotlib.pyplot as plt
 
 def ramp_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(), ap_count_window_callback=None):
+    """Analyze Ramp 4x protocol data from an ABF file.
+
+    Parameters
+    ----------
+    file_name : str
+        Path to the ABF file containing Ramp 4x protocol data.
+    df : pandas.DataFrame
+        Output DataFrame to update with extracted metrics.
+    dvdt : float, optional
+        dV/dt threshold used during AP detection.
+    check_ap_counts : bool, optional
+        Whether to show AP-count verification UI.
+    output_dir : str, optional
+        Directory for generated plots and output files.
+    ap_count_window_callback : callable, optional
+        Optional bridge for opening AP-count verification UI on the main thread.
+
+    Returns
+    -------
+    tuple
+        ``(df, error_msg)`` where ``df`` is the updated DataFrame and
+        ``error_msg`` is an error string (empty when no error is reported).
+    """
     
     if not is_ramp(file_name):
         raise Exception("Ramp_4x file is not a Rheostep")

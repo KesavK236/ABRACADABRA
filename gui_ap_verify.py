@@ -5,6 +5,21 @@ import os
 
 
 def ap_verified(ap_verify_window, ap_counts, spin_vars):
+    """
+    Update AP counts based on user verification and close the verification window.
+    Parameters
+    ----------
+    ap_verify_window : tk.Toplevel or tk.Tk
+        The window containing the AP count verification UI.
+    ap_counts : list[int]
+        List of calculated AP counts for each sweep, to be updated with verified counts.
+    spin_vars : list[tk.StringVar]
+        List of StringVar instances linked to the Spinbox widgets for user input of verified counts.
+    
+    Returns
+    -------
+    None
+    """
     ap_counts[0] = int(spin_vars[0].get())
     ap_counts[1] = int(spin_vars[1].get())
     ap_counts[2] = int(spin_vars[2].get())
@@ -21,6 +36,20 @@ def resource_path(relative_path):
 
 
 def ap_count_window(image_names, ap_counts):
+    """Create a GUI window for verifying calculated action potential counts.
+    
+    Parameters
+    ----------
+    image_names : list[str]
+        List of file paths to images showing detected APs for each sweep.
+    ap_counts : list[int]
+        List of calculated AP counts for each sweep, to be displayed and verified by the user.
+    
+     Returns
+     -------
+     list[int]
+         Updated list of AP counts based on user verification.
+     """
     global window_width
     try:
         ap_verify_window = tk.Toplevel()
@@ -72,6 +101,16 @@ def ap_count_window(image_names, ap_counts):
 
     
     def on_resize(event):
+        """Handle window resize events to adjust the size of the displayed images while maintaining aspect ratio.
+        Parameters
+        ----------
+        event : tk.Event
+            The event object containing information about the resize event.
+        
+        Returns
+        -------
+        None
+        """
         global window_width
         if ap_verify_window.winfo_width() != window_width:
             window_width = ap_verify_window.winfo_width()
@@ -89,6 +128,7 @@ def ap_count_window(image_names, ap_counts):
 
     
     def on_closing():
+        """Handle the window close event to ensure AP counts are updated based on user verification before closing."""
         ap_verified(ap_verify_window, ap_counts, spin_vars)
         ap_verify_window.destroy()
 

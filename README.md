@@ -3,7 +3,7 @@ Axon Binary Reading Analyzer Capable of Analyzing Data as an Axon Binary Reading
 
 ## Description
 
-An application that uses a Python script to automate data extraction of electrophysiological parameters from Current Clamp Axon Binary Files.
+An application that automates electrophysiological feature extraction from current clamp recordings in Axon Binary Files. It is protocol-defined, meaning its built around certaint 
 
 ## Getting Started
 
@@ -37,8 +37,7 @@ An application that uses a Python script to automate data extraction of electrop
 
 ## Help
 
-* Email me (k.kesav@wustl.edu) the issue you're having to the best of your ability. If possible, I would appreciate it if you also sent the files you input to help with troubleshooting. I will try to respond with a fix as soon as possible.
-
+* Email me (k.kesav@wustl.edu) the issue you're having to the best of your ability. 
 ## Authors
 
 Kesav Kothapalli

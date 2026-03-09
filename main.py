@@ -8,6 +8,18 @@ import ctypes
 # pyinstaller main.py --clean --onefile --noconsole --icon=assets/ABRACADABRA.ico --hidden-import=hampel --name ABRACADABRA --noconfirm --add-data "assets;assets" --collect-data hdmf --collect-data pynwb --collect-submodules hdmf --collect-submodules pynwb --collect-all neuroconv --collect-all ndx_dandi_icephys 
 
 def resource_path(relative_path):
+    """Resolve an asset path for source and PyInstaller builds.
+
+    Parameters
+    ----------
+    relative_path : str
+        Relative path from the project (or bundled app) root.
+
+    Returns
+    -------
+    str
+        Absolute path to the requested resource.
+    """
     try:
         base_path = sys._MEIPASS
     except:

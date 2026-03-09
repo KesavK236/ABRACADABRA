@@ -2,7 +2,6 @@ import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import pandas as pd
 from logic.rmp import rmp
-
 from logic.rheo_4x import rheo_4x
 from logic.ramp_1s import ramp_1s
 from logic.ramp_4x import ramp_4x
@@ -13,6 +12,17 @@ import datetime
 
 
 def list_abf_files(folder: str) -> list[str]:
+    """List all ABF files in a given folder and its subfolders.
+    
+    Parameters
+    ---------- 
+    folder : str
+        Path to the folder to search for ABF files.
+    
+    Returns
+    -------
+    list[str]
+        List of full file paths to ABF files found in the folder."""
     out = []
     for dirpath, _, filenames in os.walk(folder):
         for f in filenames:
@@ -21,6 +31,20 @@ def list_abf_files(folder: str) -> list[str]:
     return out
 
 def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
+    """Run a single analysis task based on the provided protocol and file path.
+
+    Parameters
+    ----------
+    task : dict
+        A dictionary containing the file path and analysis type.
+    output_base_dir : str
+        The base directory to save the analysis results.
+    
+    Returns
+    -------
+    pd.DataFrame
+        A DataFrame containing the analysis results.
+    """
     file_path = task["file_path"]
     analysis_type = task["protocol"]
     df = pd.DataFrame(index=[os.path.basename(file_path)])
@@ -86,6 +110,27 @@ def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
     return task, df
 
 def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None, status_callback=None):
+    """Run analysis on multiple ABF files in parallel using multiprocessing.
+    
+    Parameters
+    ----------
+    folder_paths : list[str]
+        List of folder paths to search for ABF files, one for each protocol type.
+    output_dir : str
+        Base directory to save the analysis results.
+    dvdt : float, optional
+        dV/dt threshold used for AP detection, by default 20.
+    status_label : tk.Label, optional
+        A Tkinter Label widget to display status updates, by default None.
+    root : tk.Tk, optional
+        The Tkinter root window, used for updating the UI, by default None.
+    status_callback : callable, optional
+        A callback function for status updates, used for thread-safe UI updates, by default None.
+    
+    Returns
+    -------
+    None
+    """
     def set_status(text, color="blue"):
         if status_callback is not None:
             status_callback(text, color)

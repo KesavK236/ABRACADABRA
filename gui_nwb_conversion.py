@@ -5,6 +5,7 @@ from config_manager import load_config, save_config
 
 
 def nwb_conversion_input_window():
+    """Create a GUI window to collect metadata for NWB conversion from the user."""
     global metadata
     convert_window = tk.Toplevel()
     convert_window.title("ABRACADABRA: NWB Conversion")

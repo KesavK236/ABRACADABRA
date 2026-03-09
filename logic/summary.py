@@ -26,10 +26,61 @@ def callback(
     threshold_window_callback=None,
     ap_count_window_callback=None
 ):
+    """Run the single-cell analysis pipeline for selected protocol files.
+
+    Parameters
+    ----------
+    file_paths : list[str]
+        Per-protocol input file paths in UI order.
+    output_name : str
+        Base output name used for output directory and CSV naming.
+    dvdt : float
+        dV/dt threshold used by AP-detection protocols.
+    verify_threshold : bool, optional
+        Whether threshold-verification dialogs should be enabled.
+    verify_ap_counts : bool, optional
+        Whether AP-count verification dialogs should be enabled.
+    open_excel : bool, optional
+        Whether to open the final CSV output in Excel.
+    open_phase : bool, optional
+        Whether to open generated phase-plane CSV outputs in Excel.
+    status_label : tkinter.Label, optional
+        Legacy status label target for direct UI updates.
+    error_labels : list[tkinter.Label], optional
+        Legacy per-protocol error labels for direct UI updates.
+    root : tkinter.Tk, optional
+        Legacy root used for ``update_idletasks`` when callbacks are not supplied.
+    status_callback : callable, optional
+        Callback ``(text, color)`` used for thread-safe status updates.
+    error_callback : callable, optional
+        Callback ``(index, text)`` used for thread-safe error updates.
+    threshold_window_callback : callable, optional
+        Main-thread bridge used to open threshold-verification dialogs.
+    ap_count_window_callback : callable, optional
+        Main-thread bridge used to open AP-count verification dialogs.
+
+    Returns
+    -------
+    str
+        Path to the generated analyzed CSV file.
+    """
     if not output_name:
         raise ValueError("Output file name cannot be empty.")
 
     def set_status(text, color="blue"):
+        """Dispatch a status update via callback or legacy widgets.
+
+        Parameters
+        ----------
+        text : str
+            Status message text.
+        color : str, optional
+            Tk-compatible text color.
+
+        Returns
+        -------
+        None
+        """
         if status_callback is not None:
             status_callback(text, color)
             return
@@ -39,6 +90,19 @@ def callback(
             root.update_idletasks()
 
     def set_error(index, text):
+        """Dispatch a protocol error update via callback or legacy widgets.
+
+        Parameters
+        ----------
+        index : int
+            Protocol row index in the UI.
+        text : str
+            Error message text.
+
+        Returns
+        -------
+        None
+        """
         if error_callback is not None:
             error_callback(index, str(text))
             return

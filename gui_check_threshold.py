@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import sys
 import os
 import numpy as np
-from logic.helpers import generate_derivatives
+from logic.processing import generate_derivatives
 
 
 def resource_path(relative_path):
@@ -19,12 +19,14 @@ def resource_path(relative_path):
 
 
 def thresh_good_button(check_threshold_window):
+    """Handle the event when the user confirms that the calculated threshold is good, setting the decision variable accordingly and closing the window."""
     global decision
     decision = 1
     check_threshold_window.destroy()
 
 
 def window_button(check_threshold_window):
+    """Handle the event when the user opts to search for the threshold within a specified window, setting the decision variable accordingly and closing the window."""
     global decision
     decision = 0
     check_threshold_window.destroy()
@@ -32,6 +34,7 @@ def window_button(check_threshold_window):
 
 
 def sweep_increase(check_threshold_window):
+    """Handle the event when the user opts to check the next sweep, setting the decision variable accordingly and closing the window."""
     global decision
     decision = 2
     check_threshold_window.destroy()
@@ -39,6 +42,31 @@ def sweep_increase(check_threshold_window):
 
 
 def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep_y, threshold_index, curr_start_index, current_end_index):
+    """Display a GUI window for the user to verify the calculated threshold and optionally specify a search window for recalculating the threshold.
+    Parameters
+    ----------
+    check_thresh : bool
+        Whether to show the threshold verification UI or not.
+    upper_window : float
+        Initial upper bound of the search window in seconds.
+    lower_window : float
+        Initial lower bound of the search window in seconds.
+    sweep_x : numpy.ndarray
+        Time values of the current sweep.
+    sweep_y : numpy.ndarray
+        Voltage values of the current sweep.
+    threshold_index : int
+        Index of the calculated threshold within the sweep data.
+    curr_start_index : int
+        Index of the start of the current injection within the sweep data.
+    current_end_index : int
+        Index of the end of the current injection within the sweep data.
+    
+    Returns
+    -------
+    tuple
+        A tuple containing the user's decision (1 for threshold is good, 0 for search in window, 2 for check next sweep) and the potentially updated upper and lower bounds of the search window.
+    """
     global decision
     global window_width
 
@@ -126,6 +154,9 @@ def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep
 
 
     def on_closing():
+        """
+        Handles the window closing event.
+        """
         global decision
         decision = 0
         mgr = fig1.canvas.manager

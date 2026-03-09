@@ -1,11 +1,43 @@
 import os
 from gui_check_threshold import check_thresh_window
-from logic.helpers import load_abf, current_injection_points_rheo, ap_curr_and_time, adjust_units, no_spaces, save_plot, generate_derivatives, is_ramp, phase_plane, get_max
+from logic.processing import (
+    ap_curr_and_time,
+    current_injection_points_rheo,
+    generate_derivatives,
+    get_max,
+    is_ramp,
+    load_abf,
+)
+from logic.utils import adjust_units, no_spaces, phase_plane, save_plot
 import numpy as np
 from scipy.signal import savgol_filter, find_peaks
 
 
 def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(), threshold_window_callback=None):
+    """Analyze the Short Rheo 5ms protocol from an ABF file.
+
+    Parameters
+    ----------
+    file_name : str
+        Path to the ABF file containing Short Rheo 5ms protocol data.
+    df : pandas.DataFrame
+        Output DataFrame to update with extracted metrics.
+    dvdt : float, optional
+        dV/dt threshold used for AP detection.
+    check_threshold : bool, optional
+        Whether to show threshold-verification UI.
+    output_dir : str, optional
+        Directory for generated plots and output files.
+    threshold_window_callback : callable, optional
+        Optional bridge for opening threshold-verification UI on the main thread.
+
+    Returns
+    -------
+    tuple
+        ``(df, phase_plane_table, error_msg)`` where ``df`` is the updated
+        analysis DataFrame, ``phase_plane_table`` contains phase-plane output,
+        and ``error_msg`` is an error string (empty when no error is reported).
+    """
     num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name)
     error_msg = ""
     print("Rheo_5ms Data:")

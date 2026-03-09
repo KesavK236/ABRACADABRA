@@ -5,14 +5,24 @@ import queue
 from tkinter.filedialog import askopenfilename, askdirectory
 import sys
 from logic.summary import callback
-from logic.bulk_summary import bulk_analysis
 from logic.nwb_conversion import convert_to_nwb
 from config_manager import load_config, save_config
 from logic.multiprocess import multiprocess
 from PIL import ImageTk, Image
 
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and PyInstaller """
+    """Resolve an asset path for source and PyInstaller builds.
+
+    Parameters
+    ----------
+    relative_path : str
+        Relative path from the project (or bundled app) root.
+
+    Returns
+    -------
+    str
+        Absolute path to the requested resource.
+    """
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
@@ -23,9 +33,32 @@ filenames = ["No File Chosen"] * 6
 foldernames = [""] * 6
 
 def launch_gui(root):
+    """Build and launch the ABRACADABRA Tkinter interface.
+
+    Parameters
+    ----------
+    root : tkinter.Tk
+        Root Tkinter window.
+    """
     ui_queue = queue.Queue()
 
     def invoke_on_main_thread(fn, *args, **kwargs):
+        """Run a callable on the Tk main thread and block for its result.
+
+        Parameters
+        ----------
+        fn : callable
+            Function to execute on the main thread.
+        *args : tuple
+            Positional arguments forwarded to ``fn``.
+        **kwargs : dict
+            Keyword arguments forwarded to ``fn``.
+
+        Returns
+        -------
+        object
+            Return value from ``fn``.
+        """
         if threading.current_thread() is threading.main_thread():
             return fn(*args, **kwargs)
 
@@ -47,18 +80,58 @@ def launch_gui(root):
         return result["value"]
 
     def schedule_status(text, color="blue"):
+        """Queue a status-label update for main-thread processing.
+
+        Parameters
+        ----------
+        text : str
+            Status message text.
+        color : str, optional
+            Tk-compatible foreground color. Default is ``"blue"``.
+        """
         ui_queue.put(("status", text, color))
 
     def schedule_error(index, text):
+        """Queue a protocol error-label update for main-thread processing.
+
+        Parameters
+        ----------
+        index : int
+            Protocol row index in the UI.
+        text : str
+            Error message text.
+        """
         ui_queue.put(("error", index, text))
 
     def schedule_done(button, message=None, color="green"):
+        """Queue completion UI updates for a finished background task.
+
+        Parameters
+        ----------
+        button : tkinter.Button
+            Button to re-enable after task completion.
+        message : str, optional
+            Optional status message to display.
+        color : str, optional
+            Status color used when ``message`` is provided.
+        """
         ui_queue.put(("done", button, message, color))
 
     def schedule_failure(button, message):
+        """Queue failure UI updates for a background task.
+
+        Parameters
+        ----------
+        button : tkinter.Button
+            Button to re-enable after failure.
+        message : str
+            Error message text.
+        """
         ui_queue.put(("failure", button, message))
 
     def process_ui_queue():
+        """Drain queued UI events and apply them on the Tk thread.
+        """
         try:
             while True:
                 event = ui_queue.get_nowait()
@@ -83,6 +156,16 @@ def launch_gui(root):
         root.after(100, process_ui_queue)
 
     def start_background_task(button, worker):
+        """Start a worker thread and manage button/UI completion state.
+
+        Parameters
+        ----------
+        button : tkinter.Button
+            Button disabled during task execution and re-enabled at exit.
+        worker : callable
+            Zero-argument callable executed in a daemon thread.
+
+        """
         button.config(state="disabled")
 
         def run_worker():
@@ -95,7 +178,21 @@ def launch_gui(root):
         threading.Thread(target=run_worker, daemon=True).start()
 
     def make_file_change_handler(index):
+        """Build a file/folder picker callback bound to a protocol index.
+
+        Parameters
+        ----------
+        index : int
+            Protocol row index.
+
+        Returns
+        -------
+        callable
+            UI callback for the corresponding Change button.
+        """
         def file_change():
+            """Handle Change button selection for one protocol row.
+            """
             if process_bool.get():
                 foldername = askdirectory()
                 if foldername == "":
@@ -111,7 +208,21 @@ def launch_gui(root):
         return file_change
     
     def make_file_clear_handler(index):
+        """Build a clear callback bound to a protocol index.
+
+        Parameters
+        ----------
+        index : int
+            Protocol row index.
+
+        Returns
+        -------
+        callable
+            UI callback for the corresponding Clear button.
+        """
         def file_clear():
+            """Handle Clear button behavior for one protocol row.
+            """
             if process_bool.get():
                 foldernames[index] = "No Folder Chosen"
                 file_labels[index].config(text="No Folder Chosen")
@@ -122,6 +233,8 @@ def launch_gui(root):
     
     
     def apply_mode():
+        """Toggle between single-cell and batch-processing UI modes.
+        """
         if not process_bool.get():
             process_bool.set(True)
             process_button.config(image=batch_img)
@@ -150,6 +263,8 @@ def launch_gui(root):
                 clear_buttons[i].config(text="Clear File")
 
     def on_enter():
+        """Start analysis using current UI selections and mode.
+        """
         for i in range(6):
             error_labels[i].config(text="")
         if process_bool.get():
@@ -160,6 +275,8 @@ def launch_gui(root):
             dvdt = int(dvdt_value.get())
 
             def bulk_worker():
+                """Execute bulk analysis work in a worker thread.
+                """
                 # bulk_analysis(...) is intentionally left disabled here to preserve existing behavior.
                 multiprocess(
                     folder_paths=folder_paths,
@@ -181,6 +298,8 @@ def launch_gui(root):
             open_phase_value = open_phase.get()
 
             def single_worker():
+                """Execute single-cell analysis work in a worker thread.
+                """
                 callback(
                     file_paths=file_paths,
                     output_name=output_name,
@@ -198,6 +317,8 @@ def launch_gui(root):
             start_background_task(run_button, single_worker)
 
     def on_convert():
+        """Start NWB conversion for selected files.
+        """
         for i in range(6):
             error_labels[i].config(text="")
         status_label.config(text="Converting to NWB...", fg="blue")
@@ -206,6 +327,8 @@ def launch_gui(root):
         output_folder = output_filename.get()
 
         def convert_worker():
+            """Execute NWB conversion in a worker thread.
+            """
             convert_to_nwb(file_names=file_names, output_folder=output_folder)
             schedule_status("NWB Conversion Complete!", "green")
 
@@ -213,6 +336,8 @@ def launch_gui(root):
 
 
     def on_closing():
+        """Persist config and close the application window.
+        """
         root.destroy()
         config["dvdt_value"] = dvdt_value.get()
         config["check_threshold"] = check_threshold.get()

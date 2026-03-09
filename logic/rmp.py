@@ -1,8 +1,26 @@
 import os
-from logic.helpers import load_abf, no_spaces, save_plot
+from logic.processing import load_abf
+from logic.utils import no_spaces, save_plot
 import pandas as pd
 
 def rmp(file_name, df, output_dir=os.getcwd()):
+    """Analyze the RMP protocol from an ABF file.
+
+    Parameters
+    ----------
+    file_name : str
+        Path to the ABF file containing RMP protocol data.
+    df : pandas.DataFrame
+        Output DataFrame to update with extracted metrics.
+    output_dir : str, optional
+        Output directory for generated plots and files.
+
+    Returns
+    -------
+    tuple
+        ``(df, error_msg)`` where ``df`` is the updated DataFrame and
+        ``error_msg`` is an error string (empty when no error is reported).
+    """
 
     # Priming output
     print("Rmp Data:")

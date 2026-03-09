@@ -7,6 +7,19 @@ from uuid import uuid4
 
 
 def convert_to_nwb(file_names, output_folder):
+    """Convert ABF files to NWB format using user-provided metadata.
+    Parameters
+    ----------
+    file_names : list of str
+        List of ABF file paths to convert.
+    output_folder : str
+        Directory where the converted NWB file will be saved.
+    
+    Returns
+    -------
+    str
+        Path to the generated NWB file.
+    """
     nofile = "No File Chosen"
     inputs = nwb_conversion_input_window()
 
