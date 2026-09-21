@@ -1,6 +1,6 @@
 import numpy as np
 import pyabf
-from hampel import hampel
+from numpy.lib.stride_tricks import sliding_window_view
 from scipy.signal import find_peaks, savgol_filter
 
 from .filters import butter_lowpass_filter, rolling_mean
@@ -413,6 +413,41 @@ def get_max(sweep_x, sweep_y, max_index, sampling_rate, delta=0.00001):
     return peak
 
 
+def hampel_filter(data, window_size=5, n_sigma=3.0):
+    """Replaces outliers with the median of a centered moving window (Hampel filter).
+
+    A point is an outlier if it deviates from the window median by more than
+    n_sigma * 1.4826 * MAD. The window is centered on the point and spans
+    2 * (window_size // 2) + 1 points. The first and last window_size // 2 points
+    are returned unchanged.
+
+    Parameters
+    ----------
+    data : 1D array-like
+        The signal to filter.
+    window_size : int, optional
+        Approximate window width in points. Default is 5.
+    n_sigma : float, optional
+        Number of scaled MADs beyond which a point is an outlier. Default is 3.0.
+
+    Returns
+    -------
+    1D numpy array
+        A copy of the data with outliers replaced by the window median.
+    """
+    filtered = np.array(data, dtype=float)
+    half = window_size // 2
+    if half < 1 or len(filtered) < 2 * half + 1:
+        return filtered
+    windows = sliding_window_view(filtered, 2 * half + 1)
+    medians = np.median(windows, axis=1)
+    mad = np.median(np.abs(windows - medians[:, None]), axis=1)
+    center = filtered[half:-half]
+    outliers = np.abs(center - medians) > n_sigma * 1.4826 * mad
+    filtered[half:-half][outliers] = medians[outliers]
+    return filtered
+
+
 def generate_derivatives(sweep_x, sweep_y, hampel_bool=False):
     """Generates the first and second derivatives of the voltage sweep.
     Parameters
@@ -435,7 +470,7 @@ def generate_derivatives(sweep_x, sweep_y, hampel_bool=False):
     sweep_y_d = np.diff(sweep_y) / (1000 * np.diff(sweep_x))
     sweep_x_d = sweep_x[1:]
     if hampel_bool is True:
-        sweep_y_d = hampel(sweep_y_d, window_size=5, n_sigma=3.0).filtered_data
+        sweep_y_d = hampel_filter(sweep_y_d, window_size=5, n_sigma=3.0)
 
     sweep_y_d2 = np.diff(sweep_y_d) / (1000 * np.diff(sweep_x_d))
     sweep_x_d2 = sweep_x_d[1:]

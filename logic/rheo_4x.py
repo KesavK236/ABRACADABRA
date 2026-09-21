@@ -52,6 +52,8 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
     image_names = ["", "", "", ""]
     loaded = None
     current_record = -1
+    sweep_isi_means = [np.nan, np.nan, np.nan, np.nan]
+    sweep_isi_cvs = [np.nan, np.nan, np.nan, np.nan]
 
     for i in range(num_sweeps):
         _, sweep_x, sweep_y, sweep_y_raw, sweep_c, sweep_stim,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=i, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
@@ -109,6 +111,17 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
                     ap_found = 0
             j += 1
 
+        #ISI Analysis
+        
+        if len(points) > 1:
+            isi = np.diff([p[0] for p in points])
+            mean_isi = np.mean(isi)
+            sweep_isi_means[i] = mean_isi
+            sd_isi = np.std(isi)
+            cv_isi = sd_isi / mean_isi if mean_isi != 0 else float('nan')
+            sweep_isi_cvs[i] = cv_isi
+
+        
         image_name = no_spaces(df.index[0]) + f"_rheo_{i+1}x_graph.png"
         save_plot(
             x=sweep_x,
@@ -142,5 +155,9 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
         df[f"Relative Current Step at Rheo {i+1}x rheobase"] = stim_currs[i]-holding_currs[i]
         print(f"Number of Action Potentials in Rheo {i+1}x rheobase: {ap_counts[i]}")
         df[f"Number of Action Potentials in Rheo {i+1}x rheobase"] = ap_counts[i]
+        print(f"Mean ISI for sweep {i+1}: {sweep_isi_means[i]} ms")
+        df[f"Mean ISI for Rheo {i+1}x rheobase"] = sweep_isi_means[i]
+        print(f"Coefficient of Variation of ISI for sweep {i+1}: {sweep_isi_cvs[i]}")
+        df[f"Coefficient of Variation of ISI for Rheo {i+1}x rheobase"] = sweep_isi_cvs[i]
 
     return df, error_msg

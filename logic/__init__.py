@@ -1,5 +1,4 @@
 from .rmp import rmp
-from .rheo_1s import rheo_1s
 from .rheo_4x import rheo_4x
 from .ramp_1s import ramp_1s
 from .ramp_4x import ramp_4x
