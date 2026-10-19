@@ -8,12 +8,13 @@ from logic.processing import (
     is_ramp,
     load_abf,
 )
-from logic.utils import adjust_units, no_spaces, phase_plane, save_plot
+from logic.utils import adjust_units, check_no_change, no_spaces, phase_plane, save_plot
 import numpy as np
 from scipy.signal import find_peaks
+import pandas as pd
 
 
-def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.getcwd(), threshold_window_callback=None):
+def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rheo1s_freq=False, output_dir=os.getcwd(), threshold_window_callback=None):
     """Analyze the Short Rheo 1s protocol from an ABF file.
 
     Parameters
@@ -22,10 +23,14 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
         Path to the ABF file containing Short Rheo 1s protocol data.
     df : pandas.DataFrame
         Output DataFrame to update with extracted metrics.
+    isi_df : pandas.DataFrame
+        DataFrame to store inter-sweep interval data.
     dvdt : float, optional
         dV/dt threshold used for AP detection.
     check_threshold : bool, optional
         Whether to show threshold-verification UI.
+    get_rheo1s_freq : bool, optional
+        Whether to calculate and return the firing frequency of suprathreshold sweeps of the Rheo 1s protocol.
     output_dir : str, optional
         Directory for generated plots and output files.
     threshold_window_callback : callable, optional
@@ -34,8 +39,8 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
     Returns
     -------
     tuple
-        ``(df, phase_plane_table, error_msg)`` where ``df`` is the updated
-        analysis DataFrame, ``phase_plane_table`` contains phase-plane output,
+        ``(df, isi_df, phase_plane_table, error_msg)`` where ``df`` is the updated
+        analysis DataFrame, ``isi_df`` contains inter-sweep interval data, ``phase_plane_table`` contains phase-plane output,
         and ``error_msg`` is an error string (empty when no error is reported).
     """
     num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name)
@@ -46,7 +51,9 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
             raise Exception("Rheo_1s file is not a Rheostep")
 
     print("Rheo_1s Data:")
-    df["Rheo 1s"] = None
+    df["Rheo 1s file name"] = file_name
+    isi_df["File Name"] = file_name
+
     # f.write(f"Rheo_1s Data:\n")
 
     curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c, current_units)
@@ -99,7 +106,12 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
             sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=True)
 
 
-            while (sweep_y_d[i] < dvdt or sweep_y_d2[i] < 15) and sweep_x[i] < upper_window and i < curr_end_index:
+            # threshold is the first point of a run where dV/dt stays >= dvdt for 0.1 ms,
+            # so noise on the passive charging ramp isn't mistaken for the AP upstroke
+            sustain_points = max(1, int(0.0001 * sample_rate))
+            while sweep_x[i] < upper_window and i < curr_end_index:
+                if np.all(sweep_y_d[i:i + sustain_points] >= dvdt):
+                    break
                 i += 1
             if i < curr_end_index - 100:
                 threshold_index = i
@@ -241,6 +253,8 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
         relative_thresh_time = adjust_units((threshold_time-curr_start_time))
         relative_peak_time = adjust_units((peak_time-curr_start_time))
 
+        
+
     # Store values and output
     if "(nA)" in c_label:
         current_units = "nA"
@@ -316,6 +330,93 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
 
         print(f"Upstroke-Downstroke ratio: {rise_time_10_90 / fall_time_10_90}")
         df["Upstroke-Downstroke ratio 1s"] = rise_time_10_90 / fall_time_10_90
+
+    if get_rheo1s_freq and threshold_checked == 1:
+        print(f"Rheobase current ({current_units}): {rheobase}")
+        isi_df[f"Rheobase current ({current_units})"] = rheobase
+        print(f"Rheobase sweep index: {sweep_index}")
+        isi_df[f"Rheobase sweep index"] = sweep_index
+        rheo_sweep_index = sweep_index
+        while sweep_index < num_sweeps:
+            num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
+            sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=False)
+            
+            curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, sweep_index, sweep_x, sweep_c, current_units)
+
+            j = curr_start_index - 100
+            ap_found = 0
+            finding_peak = 0
+            ap_count = 0
+            threshold_ram = 0
+            points = []
+            while j < len(sweep_y_d) - 1:
+                if sweep_y_d[j] >= dvdt and ap_found == 0 and finding_peak == 0:
+                    # plt1.plot(sweep_x[j], sweep_y[j], 'ro')  # Mark the detected AP with a red dot
+                    # plt.plot(sweep_x_d[j], sweep_y_d[j], 'ro')
+        
+                    ap_found = 1
+                    finding_peak = 1
+                    threshold_ram = sweep_y[j]
+    
+                elif finding_peak == 1 and sweep_y_d[j] < 0 < sweep_y[j] and (sweep_y[j] - threshold_ram > dvdt):
+                    if check_no_change(sweep_y_d, j, increasing=True):
+                        # plt1.plot(sweep_x[j], sweep_y[j], 'go')  # Mark the detected peak with a green dot
+                        # plt.plot(sweep_x_d[j], sweep_y_d[j], 'go')  # Mark the detected peak with a green dot
+            
+                        if ap_count == 0:
+                            dvdt = 5
+                        finding_peak = 0
+                        ap_count += 1
+                        points.append((sweep_x[j], sweep_y[j]))
+                elif finding_peak == 0 and ap_found == 1 and sweep_y_d[j] > 0:
+                    if check_no_change(sweep_y_d, j, increasing=False):
+                        # plt1.plot(sweep_x_d[j], sweep_y_d[j], 'bo')  # Mark the end of the AP with a blue dot
+                        # plt.plot(sweep_x_d[j], sweep_y_d[j], 'bo')
+            
+                        ap_found = 0
+                j += 1
+            rel_sweep_index = sweep_index - rheo_sweep_index
+            if len(points) >= 1:
+                isi = np.diff([p[0] for p in points])
+                mean_isi = np.mean(isi)
+                sd_isi = np.std(isi)
+                cv_isi = sd_isi / mean_isi if mean_isi != 0 else float('nan')
+                if rel_sweep_index == 0:
+                    print(f"Number of APs at Rheobase: {ap_count}")
+                    isi_df[f"Number of APs at Rheobase"] = ap_count
+                    print(f"Mean ISI at Rheobase (ms): {mean_isi}")
+                    isi_df[f"Mean ISI at Rheobase (ms)"] = mean_isi
+                    print(f"CV ISI at Rheobase (ms): {cv_isi}")
+                    isi_df[f"CV ISI at Rheobase (ms)"] = cv_isi
+                else:
+                    print(f"Stimulus Current {rel_sweep_index} sweep after Rheobase ({current_units}): {stim_curr}")
+                    isi_df[f"Stimulus Current {rel_sweep_index} sweep after Rheobase ({current_units})"] = stim_curr
+                    print(f"Number of APs {rel_sweep_index} sweep after Rheobase: {ap_count}")
+                    isi_df[f"Number of APs {rel_sweep_index} sweep after Rheobase"] = ap_count
+                    print(f"Mean ISI {rel_sweep_index} sweep after Rheobase (ms): {mean_isi}")
+                    isi_df[f"Mean ISI {rel_sweep_index} sweep after Rheobase (ms)"] = mean_isi
+                    print(f"CV ISI {rel_sweep_index} sweep after Rheobase (ms): {cv_isi}")
+                    isi_df[f"CV ISI {rel_sweep_index} sweep after Rheobase (ms)"] = cv_isi
+            elif rel_sweep_index > 0:
+                if rel_sweep_index == 0:
+                    print(f"Number of APs at Rheobase: {ap_count}")
+                    isi_df[f"Number of APs at Rheobase"] = ap_count
+                    print(f"Mean ISI at Rheobase (ms): N/A")
+                    isi_df[f"Mean ISI at Rheobase (ms)"] = np.nan
+                    print(f"CV ISI at Rheobase (ms): N/A")
+                    isi_df[f"CV ISI at Rheobase (ms)"] = np.nan
+                else:
+                    print(f"Stimulus Current {rel_sweep_index} sweep after Rheobase ({current_units}): {stim_curr}")
+                    isi_df[f"Stimulus Current {rel_sweep_index} sweep after Rheobase ({current_units})"] = stim_curr
+                    print(f"Number of APs {rel_sweep_index} sweep after Rheobase: {ap_count}")
+                    isi_df[f"Number of APs {rel_sweep_index} sweep after Rheobase"] = ap_count
+                    print(f"Mean ISI {rel_sweep_index} sweep after Rheobase (ms): N/A")
+                    isi_df[f"Mean ISI {rel_sweep_index} sweep after Rheobase (ms)"] = np.nan
+                    print(f"CV ISI {rel_sweep_index} sweep after Rheobase (ms): N/A")
+                    isi_df[f"CV ISI {rel_sweep_index} sweep after Rheobase (ms)"] = np.nan
+
+            sweep_index += 1
+        
     if threshold_checked == 0:
         print("No Action Potential Detected")
         error_msg = "No Action Potential Detected"
@@ -332,4 +433,4 @@ def short_rheo_1s(file_name, df, dvdt=20, check_threshold=False, output_dir=os.g
 
     phase_plane_table = phase_plane(sweep_x, sweep_y_raw, sweep_y_d, df, step="1s", output_dir=output_dir)
 
-    return df, phase_plane_table, error_msg
+    return df, isi_df, phase_plane_table, error_msg

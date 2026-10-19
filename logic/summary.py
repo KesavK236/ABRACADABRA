@@ -14,6 +14,7 @@ def callback(
     output_name,
     dvdt,
     verify_threshold=False,
+    get_rheo1s_freq=False,
     verify_ap_counts=False,
     open_excel=False,
     open_phase=False,
@@ -120,6 +121,9 @@ def callback(
     # create output df
     output_df = pd.DataFrame(index=[output_name])
     output_df.index.name = "Cell Name"
+    isi_df = pd.DataFrame(index=[output_name])
+    isi_df.index.name = "Cell Name"
+
 
     error_msg = ""
     output_path = os.path.join(output_dir, output_name + "_analyzed.csv")
@@ -135,11 +139,13 @@ def callback(
     if file_paths[1] != no_file:
         try:
             set_status("Running Rheo 1s Protocol...", "blue")
-            output_df, pp_1s, error_msg = short_rheo_1s(
+            output_df, isi_df,  pp_1s, error_msg = short_rheo_1s(
                 file_paths[1],
                 output_df,
+                isi_df,
                 dvdt,
                 verify_threshold,
+                get_rheo1s_freq,
                 output_dir,
                 threshold_window_callback=threshold_window_callback
             )
@@ -230,6 +236,9 @@ def callback(
             else:
                 output_path = output_path + "(1)"
 
+    if get_rheo1s_freq:
+        isi_path = os.path.join(output_dir, output_name + "_isi.csv")
+        isi_df.to_csv(isi_path)
 
     if open_excel:
         os.system("start EXCEL.EXE " + output_path)

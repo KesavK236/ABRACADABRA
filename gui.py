@@ -273,6 +273,7 @@ def launch_gui(root):
             folder_paths = list(foldernames)
             output_dir = output_filename.get()
             dvdt = int(dvdt_value.get())
+            get_rheo1s_freq = check_rheo1s_freq.get()
 
             def bulk_worker():
                 """Execute bulk analysis work in a worker thread.
@@ -282,6 +283,7 @@ def launch_gui(root):
                     folder_paths=folder_paths,
                     output_dir=output_dir,
                     dvdt=dvdt,
+                    get_rheo1s_freq=get_rheo1s_freq,
                     status_callback=schedule_status
                 )
 
@@ -296,6 +298,7 @@ def launch_gui(root):
             verify_ap_counts_value = check_ap_counts.get()
             open_excel_value = open_excel.get()
             open_phase_value = open_phase.get()
+            get_rheo1s_freq = check_rheo1s_freq.get()
 
             def single_worker():
                 """Execute single-cell analysis work in a worker thread.
@@ -305,6 +308,7 @@ def launch_gui(root):
                     output_name=output_name,
                     dvdt=dvdt,
                     verify_threshold=verify_threshold_value,
+                    get_rheo1s_freq=get_rheo1s_freq,
                     verify_ap_counts=verify_ap_counts_value,
                     open_excel=open_excel_value,
                     open_phase=open_phase_value,
@@ -341,6 +345,7 @@ def launch_gui(root):
         root.destroy()
         config["dvdt_value"] = dvdt_value.get()
         config["check_threshold"] = check_threshold.get()
+        config["check_rheo1s_freq"] = check_rheo1s_freq.get()
         config["check_ap_counts"] = check_ap_counts.get()
         config["open_excel"] = open_excel.get()
         config["open_phase"] = open_phase.get()
@@ -424,39 +429,47 @@ def launch_gui(root):
     threshold_check = tk.Checkbutton(root, text="Verify Threshold Value", font=("Verdana", 12), variable=check_threshold)
     threshold_check.grid(row=10, column=2, columnspan=3, sticky='w')
 
+    check_rheo1s_freq = tk.BooleanVar()
+    if "check_rheo1s_freq" in config:
+        check_rheo1s_freq.set(bool(config["check_rheo1s_freq"]))
+    rheo1s_freq_check = tk.Checkbutton(root, text="Verify Rheobase and 1s Frequency", font=("Verdana", 12), variable=check_rheo1s_freq)
+    rheo1s_freq_check.grid(row=11, column=2, columnspan=3, sticky='w')
+
     check_ap_counts = tk.BooleanVar()
     if "check_ap_counts" in config:
         check_ap_counts.set(bool(config["check_ap_counts"]))
     ap_count_check = tk.Checkbutton(root, text="Verify AP Counts", font=("Verdana", 12), variable=check_ap_counts)
-    ap_count_check.grid(row=11, column=2, columnspan=3, sticky='w')
+    ap_count_check.grid(row=12, column=2, columnspan=3, sticky='w')
 
     open_excel = tk.BooleanVar(value=True)
     if "open_excel" in config:
         open_excel.set(bool(config["open_excel"]))
     open_excel_check = tk.Checkbutton(root, text="Open Analysis after analysis", font=("Verdana", 12), variable=open_excel)
-    open_excel_check.grid(row=12, column=2, columnspan=3, sticky='sw', pady=10)
+    open_excel_check.grid(row=13, column=2, columnspan=3, sticky='sw', pady=10)
 
     open_phase = tk.BooleanVar()
     if "open_phase" in config:
         open_phase.set(bool(config["open_phase"]))
     open_phase_check = tk.Checkbutton(root, text="Open Phase Plane after analysis", font=("Verdana", 12), variable=open_phase)
-    open_phase_check.grid(row=13, column=2, columnspan=3, sticky='w')
+    open_phase_check.grid(row=14, column=2, columnspan=3, sticky='w')
 
     # Output Stuff
     output_label = tk.Label(root, text="Output File Name", font=("Verdana", 14))
-    output_label.grid(row=14, column=0, columnspan=6, sticky='s')
+    output_label.grid(row=15, column=0, columnspan=6, sticky='s')
     output_filename = tk.StringVar()
     output_entry = tk.Entry(root, textvariable=output_filename, width=40, justify="center", font=("Verdana", 12))
-    output_entry.grid(row=15, column=0, columnspan=6, sticky='s')
+    output_entry.grid(row=16, column=0, columnspan=6, sticky='s')
 
     run_button = tk.Button(root, text="Enter", width=15, bg="green", fg="black", font=("Verdana", 12), command=on_enter)
-    run_button.grid(row=16, column=0, columnspan=6, pady=10, sticky='s')
-
-    status_label = tk.Label(root, text="", fg="blue", font=("Verdana", 14), wraplength=1000)
-    status_label.grid(row=18, column=0, columnspan=6)
+    run_button.grid(row=17, column=0, columnspan=6, pady=10, sticky='s')
 
     convert_button = tk.Button(root, text="Convert to NWB", width=15, bg="orange", fg="black", font=("Verdana", 12), command=on_convert)
-    convert_button.grid(row=17, column=0, columnspan=6, pady=5, sticky='s')
+    convert_button.grid(row=18, column=0, columnspan=6, pady=5, sticky='s')
+
+    status_label = tk.Label(root, text="", fg="blue", font=("Verdana", 14), wraplength=1000)
+    status_label.grid(row=19, column=0, columnspan=6)
+
+
 
 
     # Adding weight to rows and columns

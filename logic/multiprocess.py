@@ -51,6 +51,7 @@ def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
     dvdt = task["dvdt"]
     safe_stem = os.path.splitext(os.path.basename(file_path))[0]
     output_dir = os.path.join(output_base_dir, analysis_type, safe_stem)
+    isi_df = pd.DataFrame(index=[os.path.basename(file_path)])
     os.makedirs(output_dir, exist_ok=True)
     if analysis_type == "RMP":
         try:
@@ -63,7 +64,7 @@ def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
             df["Errors in RMP"] = error_msg
     elif analysis_type == "Rheo 1s":
         try:
-            result_df, pp1s, error_msg = short_rheo_1s(file_path, df, dvdt, check_threshold=False, output_dir=output_dir)
+            result_df, isi_df, pp1s, error_msg = short_rheo_1s(file_path, df, isi_df, dvdt, check_threshold=False, output_dir=output_dir, get_rheo1s_freq=task["get_rheo1s_freq"])
             if error_msg != "":
                 result_df["Errors in Rheo 1s"] = error_msg
             df = result_df
@@ -107,9 +108,9 @@ def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
             error_msg = str(e)
             df["Errors in Short Rheo 5ms"] = error_msg
 
-    return task, df
+    return task, df, isi_df
 
-def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None, status_callback=None):
+def multiprocess(folder_paths, output_dir, dvdt=20, get_rheo1s_freq=False, status_label=None, root=None, status_callback=None):
     """Run analysis on multiple ABF files in parallel using multiprocessing.
     
     Parameters
@@ -147,7 +148,7 @@ def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None
             tasks.append({"file_path": f, "protocol": "RMP", "dvdt": dvdt})
     if folder_paths[1] != "No Folder":
         for f in list_abf_files(folder_paths[1]):
-            tasks.append({"file_path": f, "protocol": "Rheo 1s", "dvdt": dvdt})
+            tasks.append({"file_path": f, "protocol": "Rheo 1s", "dvdt": dvdt, "get_rheo1s_freq": get_rheo1s_freq})
     if folder_paths[2] != "No Folder":
         for f in list_abf_files(folder_paths[2]):
             tasks.append({"file_path": f, "protocol": "Rheo 4x", "dvdt": dvdt})
@@ -170,17 +171,23 @@ def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None
     ramp_1s_results = []
     ramp_4x_results = []
     short_rheo_5ms_results = []
+    isi_results = []
 
     max_workers = max(1, (os.cpu_count() or 1))
     print("started processing")
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+    # Recycle worker processes after each file so memory held by pyabf/numpy
+    # (e.g. the full raw ABF data buffer) is returned to the OS between files
+    # instead of accumulating across a long batch.
+    with ProcessPoolExecutor(max_workers=max_workers, max_tasks_per_child=1) as executor:
         future_to_task = [executor.submit(run_task, task, output_dir) for task in tasks]
         for future in as_completed(future_to_task):
-            task, result_df = future.result()
+            task, result_df, isi_df = future.result()
             if task["protocol"] == "RMP":
                 rmp_results.append(result_df)
             elif task["protocol"] == "Rheo 1s":
                 rheo_1s_results.append(result_df)
+                if isi_df is not None:
+                    isi_results.append(isi_df)
             elif task["protocol"] == "Rheo 4x":
                 rheo_4x_results.append(result_df)
             elif task["protocol"] == "Ramp 1s":
@@ -197,6 +204,9 @@ def multiprocess(folder_paths, output_dir, dvdt=20, status_label=None, root=None
     if rheo_1s_results:
         rheo_1s_df = pd.concat(rheo_1s_results, ignore_index=False, sort=False).sort_index()
         rheo_1s_df.to_csv(os.path.join(output_dir, "Rheo_1s_results.csv"))
+    if isi_results  :
+        isi_df = pd.concat(isi_results, ignore_index=False, sort=False).sort_index()
+        isi_df.to_csv(os.path.join(output_dir, "Rheo_1s_ISI_results.csv"))
     if rheo_4x_results:
         rheo_4x_df = pd.concat(rheo_4x_results, ignore_index=False, sort=False).sort_index()
         rheo_4x_df.to_csv(os.path.join(output_dir, "Rheo_4x_results.csv"))
