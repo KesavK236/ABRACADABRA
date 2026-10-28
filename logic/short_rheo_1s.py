@@ -95,6 +95,7 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
         sweep_y_d_post_curr = sweep_y_d[curr_start_index:curr_end_index]
         ap_max = max(sweep_y_post_curr)
         dvdt_max = max(sweep_y_d_post_curr)
+        dvdt_min = min(sweep_y_d_post_curr)
 
         if ap_max >= 0 and dvdt_max >= 0:
             if passed_check_func == 0:
@@ -310,6 +311,9 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
         print(f"AP Rise Time 10-90 (ms): {rise_time_10_90}")
         df["AP Rise Time 10-90 1s (ms)"]  = rise_time_10_90
 
+        print(f"Max Rise dV/dt (mV/ms): {dvdt_max}")
+        df["Max Rise dV/dt 1s (mV/ms)"] = dvdt_max
+
         print(f"AP Halfwidth (ms): {halfwidth}")
         df["AP Halfwidth 1s (ms)"] = halfwidth
 
@@ -318,7 +322,10 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
 
         print(f"AP Falling Time 10-90 (ms): {fall_time_10_90}")
         df["AP Falling Time 10-90 1s (ms)"] = fall_time_10_90
-
+ 
+        print(f"Min Rise dV/dt (mV/ms): {dvdt_min}")
+        df["Min Rise dV/dt 1s (mV/ms)"] = dvdt_min
+        
         print(f"AHP Minimum (mV): {ahp}")
         df["AHP Minimum 1s (mV)"] = ahp
 

@@ -102,7 +102,7 @@ def save_plot(x, y, xlabel, ylabel, title, filename, folder=None, markers=None):
         path = filename
     fig.suptitle(title.split("/")[-1])
     FigureCanvas(fig)
-    fig.savefig(path)
+    fig.savefig(path, format="svg")
     fig.clear()
     return path
 

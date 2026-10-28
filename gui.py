@@ -432,7 +432,7 @@ def launch_gui(root):
     check_rheo1s_freq = tk.BooleanVar()
     if "check_rheo1s_freq" in config:
         check_rheo1s_freq.set(bool(config["check_rheo1s_freq"]))
-    rheo1s_freq_check = tk.Checkbutton(root, text="Verify Rheobase and 1s Frequency", font=("Verdana", 12), variable=check_rheo1s_freq)
+    rheo1s_freq_check = tk.Checkbutton(root, text="Get Suprathreshold Frequency", font=("Verdana", 12), variable=check_rheo1s_freq)
     rheo1s_freq_check.grid(row=11, column=2, columnspan=3, sticky='w')
 
     check_ap_counts = tk.BooleanVar()
