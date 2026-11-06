@@ -60,7 +60,7 @@ def check_no_change(sweep_y_d, j, increasing):
     return 1
 
 
-def save_plot(x, y, xlabel, ylabel, title, filename, folder=None, markers=None):
+def save_plot(x, y, xlabel, ylabel, title, filename, folder=None, markers=None, preview_png=False):
     """Generate and save a plot of the given x and y data.
     Parameters
     ----------
@@ -80,10 +80,13 @@ def save_plot(x, y, xlabel, ylabel, title, filename, folder=None, markers=None):
         The folder to save the plot in. If None (default), the plot will be saved in the current directory.
     markers : list of tuples, optional
         A list of (x, y) tuples to mark on the plot. Default is None, meaning no markers will be added.
+    preview_png : bool, optional
+        If True, also save a PNG copy (PIL/Tk cannot display SVG) for the AP verification window.
+        The caller is responsible for deleting it afterwards. Default is False.
     Returns
     -------
     str
-        The path to the saved plot file.
+        The path to the PNG preview if preview_png is True, otherwise the path to the saved SVG.
     """
     fig = Figure(figsize=(6, 4), dpi=200)
     ax = fig.add_subplot(111)
@@ -102,9 +105,15 @@ def save_plot(x, y, xlabel, ylabel, title, filename, folder=None, markers=None):
         path = filename
     fig.suptitle(title.split("/")[-1])
     FigureCanvas(fig)
-    fig.savefig(path, format="svg")
+    base = os.path.splitext(path)[0]
+    svg_path = base + ".svg"
+    fig.savefig(svg_path, format="svg")
+    out_path = svg_path
+    if preview_png:
+        out_path = base + ".png"
+        fig.savefig(out_path, format="png")
     fig.clear()
-    return path
+    return out_path
 
 
 def phase_plane(x, y, yd, df, step, output_dir):

@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.font as tkfont
 from PIL import ImageTk, Image
 import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -78,16 +79,28 @@ def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep
 
     check_threshold_window = tk.Toplevel()
     check_threshold_window.title("Check Threshold")
-    check_threshold_window.geometry("1284x800")
-    window_width = 1284
+    base_width, base_height = 1284, 800
+    check_threshold_window.geometry(f"{base_width}x{base_height}")
+    window_width = base_width
 
     try:   
         icon_path = resource_path("assets/ABRACADABRA.ico")
-        check_thresh_window.iconbitmap(icon_path)
+        check_threshold_window.iconbitmap(icon_path)
     except Exception:
         print("Icon Not found, continuing without it")
 
-    title_label = tk.Label(check_threshold_window, text="Verify the Calculated Threshold", font=('Verdana', 16))
+    # Shared font objects: reconfiguring their size in on_resize updates every widget using them.
+    base_title_size, base_text_size = 16, 12
+    base_plot_title_size, base_plot_tick_size = 12, 10
+    title_font = tkfont.Font(root=check_threshold_window, family="Verdana", size=base_title_size)
+    text_font = tkfont.Font(root=check_threshold_window, family="Verdana", size=base_text_size)
+
+    # Let the plot row and all columns expand so the canvases grow/shrink with the window.
+    for col in range(6):
+        check_threshold_window.grid_columnconfigure(col, weight=1)
+    check_threshold_window.grid_rowconfigure(1, weight=1)
+
+    title_label = tk.Label(check_threshold_window, text="Verify the Calculated Threshold", font=title_font)
     title_label.grid(column=0, columnspan=6, row=0)
 
     frame_left = tk.Frame(check_threshold_window, highlightbackground="black", highlightthickness=1)
@@ -96,8 +109,15 @@ def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep
     frame_right = tk.Frame(check_threshold_window, highlightbackground="black", highlightthickness=1)
     frame_right.grid(row=1, column=3, columnspan=3, sticky="nsew")
 
+    for frame in (frame_left, frame_right):
+        frame.grid_rowconfigure(1, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
 
+
+    # 7.5% margin on every side of each plot (right/top are positions, so 1 - border)
+    plot_border = 0.075
     fig1, ax1 = plt.subplots()
+    fig1.subplots_adjust(left=plot_border, right=1 - plot_border, bottom=plot_border, top=1 - plot_border)
     ax1.plot(sweep_x, sweep_y)
     ax1.plot(sweep_x[threshold_index], sweep_y[threshold_index], 'go')
     ax1.set_title("Standard Trace")
@@ -110,6 +130,7 @@ def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep
     canvas1.get_tk_widget().grid(row=1, column=0, sticky="nsew")
 
     fig2, ax2 = plt.subplots()
+    fig2.subplots_adjust(left=plot_border, right=1 - plot_border, bottom=plot_border, top=1 - plot_border)
     yd, xd, yd2, xd2 = generate_derivatives(sweep_x, sweep_y)
     ax2.plot(xd, yd)
     ax2.plot(xd[threshold_index], yd[threshold_index], 'go')
@@ -123,35 +144,59 @@ def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep
 
 
     # windowed search
-    window_upper_limit_label = tk.Label(check_threshold_window, text="Upper Bound(sec):", font=('Verdana', 12))
+    window_upper_limit_label = tk.Label(check_threshold_window, text="Upper Bound(sec):", font=text_font)
     window_upper_limit_label.grid(column=0, row=2, sticky='e', pady= 5)
 
     upper_entry = tk.StringVar()
     upper_entry.set(str(upper_window))
-    window_upper_limit_entry = tk.Entry(check_threshold_window, width=8, textvariable=upper_entry, font=('Verdana', 12))
+    window_upper_limit_entry = tk.Entry(check_threshold_window, width=8, textvariable=upper_entry, font=text_font)
     window_upper_limit_entry.grid(column=1, row=2, sticky= 'w')
 
-    window_lower_limit_label = tk.Label(check_threshold_window, text="Lower Bound (sec):", font=('Verdana', 12))
+    window_lower_limit_label = tk.Label(check_threshold_window, text="Lower Bound (sec):", font=text_font)
     window_lower_limit_label.grid(column=0, row=3, sticky='e')
 
     lower_entry = tk.StringVar()
     lower_entry.set(str(lower_window))
-    window_lower_limit_entry = tk.Entry(check_threshold_window, width=8, textvariable=lower_entry, font=('Verdana', 12))
+    window_lower_limit_entry = tk.Entry(check_threshold_window, width=8, textvariable=lower_entry, font=text_font)
     window_lower_limit_entry.grid(column=1, row=3, sticky='w')
 
     decision = 0
     # Decision buttons
     button_thresh_window = tk.Button(check_threshold_window, text="Search in this window", width=20, height=1, bg="grey", fg="black",
-                                    command=lambda: window_button(check_threshold_window), font=('Verdana', 12))
-    button_thresh_window.grid(column=0, columnspan=2, row=4, sticky='s')
+                                    command=lambda: window_button(check_threshold_window), font=text_font)
+    button_thresh_window.grid(column=0, columnspan=2, row=4, sticky='s', pady=(5, 10))
     button_thresh_good = tk.Button(check_threshold_window, text="Threshold is good!", width=20, height=1, bg="grey", fg="black",
-                                    command=lambda: thresh_good_button(check_threshold_window), font=('Verdana', 12))
-    button_thresh_good.grid(column=2, columnspan=2, row=4, sticky='s')
+                                    command=lambda: thresh_good_button(check_threshold_window), font=text_font)
+    button_thresh_good.grid(column=2, columnspan=2, row=4, sticky='s', pady=(5, 10))
     button_sweep_increase = tk.Button(check_threshold_window, text="Check next sweep", width=20, height=1, bg="grey", fg="black",
-                                    command=lambda: sweep_increase(check_threshold_window), font=('Verdana', 12))
-    button_sweep_increase.grid(column=4, columnspan=2, row=4, sticky='s')
+                                    command=lambda: sweep_increase(check_threshold_window), font=text_font)
+    button_sweep_increase.grid(column=4, columnspan=2, row=4, sticky='s', pady=(5, 10))
 
 
+
+    def on_resize(event):
+        """Scale fonts and plot text with the window size (the canvases resize themselves via the grid)."""
+        if event.widget is not check_threshold_window:
+            return  # <Configure> also fires for every child widget
+        width, height = event.width, event.height
+        if width <= 1 or height <= 1 or (width, height) == last_size[0]:
+            return
+        last_size[0] = (width, height)
+        # Use the smaller ratio so text never outgrows the space in either direction.
+        scale = min(width / base_width, height / base_height)
+        title_font.configure(size=max(8, round(base_title_size * scale)))
+        text_font.configure(size=max(7, round(base_text_size * scale)))
+        for ax in (ax1, ax2):
+            ax.title.set_fontsize(max(7, base_plot_title_size * scale))
+            ax.tick_params(labelsize=max(6, base_plot_tick_size * scale))
+        bottom_pad = max(4, round(10 * scale))
+        for button in (button_thresh_window, button_thresh_good, button_sweep_increase):
+            button.grid_configure(pady=(bottom_pad // 2, bottom_pad))
+        canvas1.draw_idle()
+        canvas2.draw_idle()
+
+    last_size = [(base_width, base_height)]
+    check_threshold_window.bind("<Configure>", on_resize)
 
     def on_closing():
         """

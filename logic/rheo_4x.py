@@ -123,7 +123,7 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
 
         
         image_name = no_spaces(df.index[0]) + f"_rheo_{i+1}x_graph.png"
-        save_plot(
+        image_names[i] = save_plot(
             x=sweep_x,
             y=sweep_y,
             xlabel=x_label,
@@ -131,9 +131,9 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
             title=os.path.basename(image_name)[:-4],
             filename=image_name,
             folder=output_dir,
-            markers=points
+            markers=points,
+            preview_png=check_ap_counts
         )
-        image_names[i] = os.path.join(output_dir, image_name)
             
 
         ap_counts[i] = ap_count
@@ -141,10 +141,19 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
         stim_currs[i] = stim_curr   
 
     if check_ap_counts:
-        if ap_count_window_callback is not None:
-            ap_counts[:] = ap_count_window_callback(ap_count_window, image_names, ap_counts)
-        else:
-            ap_counts[:] = ap_count_window(image_names, ap_counts)
+        try:
+            if ap_count_window_callback is not None:
+                ap_counts[:] = ap_count_window_callback(ap_count_window, image_names, ap_counts)
+            else:
+                ap_counts[:] = ap_count_window(image_names, ap_counts)
+        finally:
+            # PNGs are only temporary previews for the verification window
+            for png in image_names:
+                if png and png.endswith(".png") and os.path.exists(png):
+                    try:
+                        os.remove(png)
+                    except OSError as e:
+                        print(f"Could not delete preview {png}: {e}")
 
     for i in range(num_sweeps):
         print(f"Holding Current at Rheo {i+1}x rheobase: {holding_currs[i]}")

@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.font as tkfont
 from PIL import ImageTk, Image
 import sys
 import os
@@ -68,12 +69,28 @@ def ap_count_window(image_names, ap_counts):
 
     spin_vars = [tk.StringVar(value=str(count)) for count in ap_counts]
 
-    verify_label = tk.Label(ap_verify_window, text="Verify Calculated Action Potential Counts", font=("Verdana", 16))
+    # Shared font objects: reconfiguring their size in on_resize updates every widget using them.
+    base_image_width = 320
+    base_title_size, base_text_size, base_button_size = 16, 10, 12
+    title_font = tkfont.Font(root=ap_verify_window, family="Verdana", size=base_title_size)
+    text_font = tkfont.Font(root=ap_verify_window, family="Verdana", size=base_text_size)
+    button_font = tkfont.Font(root=ap_verify_window, family="Verdana", size=base_button_size)
+
+    # Equal column weights so the 8-column grid spans the window and centered widgets stay centered.
+    for col in range(8):
+        ap_verify_window.grid_columnconfigure(col, weight=1)
+
+    verify_label = tk.Label(ap_verify_window, text="Verify Calculated Action Potential Counts", font=title_font)
     verify_label.grid(column=0, columnspan=8, row=0)
 
     photo_images = []
     image_labels = []
-    pil_images = [Image.open(name) for name in image_names]
+    pil_images = []
+    for name in image_names:
+        # Load fully into memory and release the file handle so the
+        # temporary preview PNGs can be deleted afterwards (Windows locks open files).
+        with Image.open(name) as img:
+            pil_images.append(img.copy())
     
     for i in range(4):
         resized = pil_images[i].resize((320, 240), Image.LANCZOS)
@@ -84,20 +101,21 @@ def ap_count_window(image_names, ap_counts):
         image_label.grid(column=i*2, columnspan=2, row=1)
         image_labels.append(image_label)
 
-        calculated_label = tk.Label(ap_verify_window, text="Calculated Count: ", font=("Verdana", 10))
+        calculated_label = tk.Label(ap_verify_window, text="Calculated Count: ", font=text_font)
         calculated_label.grid(column=i*2, row=2, sticky='e')
 
-        count_label = tk.Label(ap_verify_window, text=str(ap_counts[i]), font=("Verdana", 10))
+        count_label = tk.Label(ap_verify_window, text=str(ap_counts[i]), font=text_font)
         count_label.grid(column=(i*2)+1, row=2, sticky='w')
 
-        manual_label = tk.Label(ap_verify_window, text="Verified Count: ", font=("Verdana", 10))
+        manual_label = tk.Label(ap_verify_window, text="Verified Count: ", font=text_font)
         manual_label.grid(column=i*2, row=3, sticky='e')
 
-        spinbox = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_vars[i], width=5, font=("Verdana", 10))
+        # Spinbox/Button widths are in characters, so they grow with their font size.
+        spinbox = tk.Spinbox(ap_verify_window, from_=0.0, to=100.0, textvariable=spin_vars[i], width=5, font=text_font)
         spinbox.grid(column=(i*2)+1, row=3, sticky='w')
 
-    verify_button = tk.Button(ap_verify_window, text="Verified!", width=10, bg="green", fg="black", font=("Verdana", 12), command=lambda: ap_verified(ap_verify_window, ap_counts, spin_vars))
-    verify_button.grid(row=4, column=0, columnspan=7, pady=10, sticky='s')
+    verify_button = tk.Button(ap_verify_window, text="Verified!", width=10, bg="green", fg="black", font=button_font, command=lambda: ap_verified(ap_verify_window, ap_counts, spin_vars))
+    verify_button.grid(row=4, column=0, columnspan=8, pady=10)
 
     
     def on_resize(event):
@@ -125,6 +143,13 @@ def ap_count_window(image_names, ap_counts):
                 photo = ImageTk.PhotoImage(resized)
                 photo_images[i] = photo
                 image_labels[i].config(image=photo)
+
+            # Scale fonts (and therefore char-width widgets) with the image size.
+            scale = new_width / base_image_width
+            title_font.configure(size=max(8, round(base_title_size * scale)))
+            text_font.configure(size=max(6, round(base_text_size * scale)))
+            button_font.configure(size=max(7, round(base_button_size * scale)))
+            verify_button.grid_configure(pady=max(4, round(10 * scale)))
 
     
     def on_closing():
