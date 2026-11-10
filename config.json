@@ -1,0 +1,7 @@
+{
+    "dvdt_value": "10",
+    "check_threshold": false,
+    "check_ap_counts": false,
+    "open_excel": false,
+    "open_phase": false
+}

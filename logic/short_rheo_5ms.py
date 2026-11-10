@@ -63,7 +63,7 @@ def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.
             error_msg = "Current not recorded in Rheo 5ms. Used Epoch instead."
         sweep_y_d, sweep_x_d, sweep_y_d2, sweep_x_d2 = generate_derivatives(sweep_x, sweep_y, hampel_bool=False)
         
-        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c)
+        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, 0, sweep_x, sweep_c, current_units)
         sweep_y_post_curr = sweep_y_raw[curr_start_index:]
         sweep_y_d_post_curr = sweep_y_d[curr_start_index:]
         ap_max = max(sweep_y_post_curr)
@@ -316,6 +316,6 @@ def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.
         folder=output_dir
     )
 
-    phase_plane_table = phase_plane(sweep_x, sweep_y, sweep_y_d, df, step="5ms", output_dir=output_dir)
+    phase_plane_table = phase_plane(sweep_x, sweep_y, sweep_y_d, sweep_c, current_units, df, step="5ms", output_dir=output_dir)
 
     return df, phase_plane_table, error_msg

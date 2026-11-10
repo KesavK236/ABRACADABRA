@@ -122,7 +122,7 @@ def save_plot(x, y, xlabel, ylabel, title, filename, folder=None, markers=None, 
     return out_path
 
 
-def phase_plane(x, y, yd, df, step, output_dir):
+def phase_plane(x, y, yd, c, c_units, df, step, output_dir):
     """Generates a phase plane plot of the voltage sweep and its derivative, saves the plot and a corresponding CSV file of the data.
     Parameters
     x : 1D numpy array
@@ -131,6 +131,10 @@ def phase_plane(x, y, yd, df, step, output_dir):
         The voltage values of the sweep in mV.
     yd : 1D numpy array
         The first derivative of the voltage sweep in mV/ms.
+    c : 1D numpy array
+        The stimulus values of the sweep in pA or nA.
+    c_units : str
+        The units of the stimulus values ("pA" or "nA").
     df : DataFrame
         The DataFrame containing the sweep data, used to generate the filename and title for the plot.
     step : str
@@ -155,9 +159,9 @@ def phase_plane(x, y, yd, df, step, output_dir):
     table_file = os.path.join(output_dir, file_name + ".csv")
 
     with open(table_file, "w") as g:
-        g.write("Time (s), Voltage (mV), dV/dt (mv/ms) \n")
+        g.write(f"Time (s), Voltage (mV), dV/dt (mv/ms), Stimulus ({c_units}) \n")
         for i in range(len(yd)):
-            g.write(f"{x[i]}, {y[i]}, {yd[i]} \n")
+            g.write(f"{x[i]}, {y[i]}, {yd[i]}, {c[i]} \n")
 
     save_plot(
         y[:-1],
