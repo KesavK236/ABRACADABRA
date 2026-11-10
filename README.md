@@ -40,13 +40,9 @@ ABRACADABRA offers a high-throughput standardized analysis of current-clamp reco
 
 ## Installation
 
-A standalone Windows executable is coming soon and will be posted on the [Releases page](https://github.com/KesavK236/ABRACADABRA/releases). For now, install from source:
-
-<!-- When the .exe is released, add:
 ### Windows executable
-Download the latest .exe from the Releases page.
+Download the latest .exe from the [Releases page](https://github.com/KesavK236/ABRACADABRA/releases).
 The first time you run it, Windows Defender SmartScreen may show a "Windows protected your PC" warning because the app isn't code-signed. Click **More info**, then **Run anyway**.
--->
 
 ### From source
 ```bash
