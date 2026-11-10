@@ -8,13 +8,13 @@ from logic.processing import (
     is_ramp,
     load_abf,
 )
-from logic.utils import adjust_units, check_no_change, no_spaces, phase_plane, save_plot
+from logic.utils import NeedsReview, adjust_units, check_no_change, no_spaces, phase_plane, save_plot
 import numpy as np
 from scipy.signal import find_peaks
 import pandas as pd
 
 
-def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rheo1s_freq=False, output_dir=os.getcwd(), threshold_window_callback=None):
+def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rheo1s_freq=False, output_dir=os.getcwd(), threshold_window_callback=None, prompt_flagged=False, allow_prompt=True):
     """Analyze the Short Rheo 1s protocol from an ABF file.
 
     Parameters
@@ -35,6 +35,13 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
         Directory for generated plots and output files.
     threshold_window_callback : callable, optional
         Optional bridge for opening threshold-verification UI on the main thread.
+    prompt_flagged : bool, optional
+        Whether a suspicious threshold (above the previous sweep's subthreshold peak) should
+        open the check window when ``check_threshold`` is off. The check always runs; this only
+        controls whether the user is prompted. Default is False.
+    allow_prompt : bool, optional
+        Whether a window may be opened for a flagged threshold. When False (e.g. in a multiprocessing worker),
+        :class:`NeedsReview` is raised instead so the caller can re-run the file interactively.
 
     Returns
     -------
@@ -60,6 +67,7 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
 
     curr_length = curr_end_index - curr_start_index
     standard_curr_start = curr_start_index
+    base_volt = np.mean(sweep_y[: curr_start_index - 200])
 
     
     sweep_index = 0
@@ -67,6 +75,9 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
     passed_check_func = 0
     hyper_pol_input_res_array = []
     sag_peak = 0
+    step = 1  # +1 walks forward through sweeps, -1 after "check previous sweep"
+    sweep_peaks = {}  # sweep index -> max voltage during current injection
+    hyperpol_done = set()  # sweeps already counted, so going back doesn't duplicate them
 
     while sweep_index < num_sweeps and not threshold_checked:
         num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
@@ -77,7 +88,8 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
         curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, sweep_index, sweep_x, sweep_c, current_units)
 
         curr_diff = stim_curr - holding_curr
-        if curr_diff < -7.5:
+        if curr_diff < -7.5 and sweep_index not in hyperpol_done:
+            hyperpol_done.add(sweep_index)
             v_min = np.min(sweep_y)
 
             base_volt = np.mean(sweep_y[curr_start_index - 400: curr_start_index - 200])
@@ -92,6 +104,7 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
         
             
         sweep_y_post_curr = sweep_y_raw[curr_start_index:curr_end_index]
+        sweep_peaks[sweep_index] = np.max(sweep_y_post_curr)
         sweep_y_d_post_curr = sweep_y_d[curr_start_index:curr_end_index]
         ap_max = max(sweep_y_post_curr)
         dvdt_max = max(sweep_y_d_post_curr)
@@ -119,39 +132,71 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
                 threshold_volt = sweep_y_raw[threshold_index]
                 threshold_time = sweep_x[threshold_index] 
                 threshold_curr = sweep_c[curr_start_index + 5]
+                # every earlier sweep was visited on the way here, so its peak is recorded
+                last_sweep_peak_volt = sweep_peaks.get(sweep_index - 1, base_volt)
+                voltage_diff = threshold_volt - last_sweep_peak_volt
+
+                # Flag: threshold sits above the previous sweep's subthreshold peak.
+                # Always checked; only prompts (forces the window for this sweep) when
+                # prompt_flagged is on and the normal threshold check is off.
+                flagged = voltage_diff < 0
+                if flagged:
+                    print(f"Flagged sweep {sweep_index}: threshold {threshold_volt} mV > previous peak {last_sweep_peak_volt} mV")
+                flagged = flagged and prompt_flagged and not check_threshold
+                if flagged and not allow_prompt:
+                    raise NeedsReview(
+                        f"Rheo 1s sweep {sweep_index}: threshold ({threshold_volt:.2f} mV) is above "
+                        f"previous sweep peak ({last_sweep_peak_volt:.2f} mV)"
+                    )
+                show_window = check_threshold or flagged
 
                 if threshold_window_callback is not None:
                     threshold_checked, upper_window, lower_window = threshold_window_callback(
                         check_thresh_window,
-                        check_threshold,
+                        show_window,
                         upper_window,
                         lower_window,
                         sweep_x,
                         sweep_y,
                         threshold_index,
                         curr_start_index,
-                        len(sweep_c) - 100
+                        len(sweep_c) - 100,
+                        file_name=file_name,
+                        sweep_index=sweep_index
                     )
                 else:
                     threshold_checked, upper_window, lower_window = check_thresh_window(
-                        check_threshold,
+                        show_window,
                         upper_window,
                         lower_window,
                         sweep_x,
                         sweep_y,
                         threshold_index,
                         curr_start_index,
-                        len(sweep_c) - 100
+                        len(sweep_c) - 100,
+                        file_name=file_name,
+                        sweep_index=sweep_index
                     )
                 passed_check_func = 1
             else:
-                sweep_index += 1
+                sweep_index += step
         else:
-            sweep_index += 1
+            sweep_index += step
 
         if threshold_checked == 2:
-            sweep_index += 1
+            step = 1
+            sweep_index += step
             threshold_checked = 0
+        elif threshold_checked == 3:
+            step = -1
+            sweep_index += step
+            threshold_checked = 0
+
+        if sweep_index < 0:
+            # no earlier sweep with an AP; head forward again
+            sweep_index = 0
+            step = 1
+
 
 
     if threshold_checked == 1:
@@ -337,6 +382,12 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
 
         print(f"Upstroke-Downstroke ratio: {rise_time_10_90 / fall_time_10_90}")
         df["Upstroke-Downstroke ratio 1s"] = rise_time_10_90 / fall_time_10_90
+
+        # # for revision data
+        # num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=sweep_index - 1, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
+        # print(f"SubThreshold peak voltage (mV): {np.max(sweep_y_raw[curr_start_index:curr_end_index])}")
+        # df["SubThreshold peak voltage (mV)"] = np.max(sweep_y_raw[curr_start_index:curr_end_index])
+
 
     if get_rheo1s_freq and threshold_checked == 1:
         print(f"Rheobase current ({current_units}): {rheobase}")

@@ -54,6 +54,7 @@ def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.
     sweep_index = 0
     threshold_checked = False
     passed_check_func = 0
+    step = 1  # +1 walks forward through sweeps, -1 after "check previous sweep"
 
     while sweep_index < num_sweeps and not threshold_checked:
         num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __, x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=sweep_index, smooth=True, loaded=loaded, current_record=current_record, protocol="rheo")
@@ -95,7 +96,9 @@ def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.
                     sweep_y,
                     threshold_index,
                     curr_start_index,
-                    len(sweep_c) - 100
+                    len(sweep_c) - 100,
+                    file_name=file_name,
+                    sweep_index=sweep_index
                 )
             else:
                 threshold_checked, upper_window, lower_window = check_thresh_window(
@@ -106,16 +109,28 @@ def short_rheo_5ms(file_name, df, dvdt=20, check_threshold=False, output_dir=os.
                     sweep_y,
                     threshold_index,
                     curr_start_index,
-                    len(sweep_c) - 100
+                    len(sweep_c) - 100,
+                    file_name=file_name,
+                    sweep_index=sweep_index
                 )
             passed_check_func = 1
         
         else:
-            sweep_index += 1
+            sweep_index += step
 
         if threshold_checked == 2:
-            sweep_index += 1
+            step = 1
+            sweep_index += step
             threshold_checked = 0
+        elif threshold_checked == 3:
+            step = -1
+            sweep_index += step
+            threshold_checked = 0
+
+        if sweep_index < 0:
+            # no earlier sweep with an AP; head forward again
+            sweep_index = 0
+            step = 1
 
 
     holding_curr = np.mean(sweep_c[curr_start_index-101 : curr_start_index-1])

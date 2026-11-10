@@ -4,6 +4,12 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 
+class NeedsReview(Exception):
+    """Raised by a protocol when it flags data that needs the user to look at it,
+    but it is running somewhere that cannot open a window (e.g. a multiprocessing worker).
+    The batch runner catches this and re-runs the file on the GUI side so it can prompt."""
+
+
 def adjust_units(num, figs=3):
     """Multipies the number by 1000 and rounds to the given number of significant figures.
     Parameters

@@ -7,6 +7,7 @@ from logic.ramp_1s import ramp_1s
 from logic.ramp_4x import ramp_4x
 from logic.short_rheo_5ms import short_rheo_5ms
 from logic.short_rheo_1s import short_rheo_1s
+from logic.utils import NeedsReview
 import datetime
 
 
@@ -30,7 +31,7 @@ def list_abf_files(folder: str) -> list[str]:
                 out.append(os.path.join(dirpath, f))
     return out
 
-def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
+def run_task(task: dict, output_base_dir: str, threshold_window_callback=None, ap_count_window_callback=None, interactive=False):
     """Run a single analysis task based on the provided protocol and file path.
 
     Parameters
@@ -39,11 +40,20 @@ def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
         A dictionary containing the file path and analysis type.
     output_base_dir : str
         The base directory to save the analysis results.
-    
+    threshold_window_callback : callable, optional
+        Bridge for opening the threshold window on the GUI thread. Only usable in the main
+        process (it cannot be pickled to a worker), so only pass it when ``interactive`` is True.
+    ap_count_window_callback : callable, optional
+        Bridge for opening the AP count window on the GUI thread. Same restriction as above.
+    interactive : bool, optional
+        False when running in a worker process: protocols raise ``NeedsReview`` instead of
+        opening a window. True when re-running a flagged file in the main process.
+
     Returns
     -------
-    pd.DataFrame
-        A DataFrame containing the analysis results.
+    tuple
+        ``(task, df, isi_df, review_msg)`` where ``review_msg`` is None, or the reason the
+        file was flagged for user review (only possible when ``interactive`` is False).
     """
     file_path = task["file_path"]
     analysis_type = task["protocol"]
@@ -53,6 +63,7 @@ def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
     output_dir = os.path.join(output_base_dir, analysis_type, safe_stem)
     isi_df = pd.DataFrame(index=[os.path.basename(file_path)])
     os.makedirs(output_dir, exist_ok=True)
+    review_msg = None
     if analysis_type == "RMP":
         try:
             result_df, error_msg = rmp(file_path, df, output_dir)
@@ -64,10 +75,18 @@ def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
             df["Errors in RMP"] = error_msg
     elif analysis_type == "Rheo 1s":
         try:
-            result_df, isi_df, pp1s, error_msg = short_rheo_1s(file_path, df, isi_df, dvdt, check_threshold=False, output_dir=output_dir, get_rheo1s_freq=task["get_rheo1s_freq"])
+            result_df, isi_df, pp1s, error_msg = short_rheo_1s(
+                file_path, df, isi_df, dvdt, check_threshold=False, output_dir=output_dir,
+                get_rheo1s_freq=task["get_rheo1s_freq"],
+                threshold_window_callback=threshold_window_callback,
+                prompt_flagged=task.get("check_flagged", False),
+                allow_prompt=interactive,
+            )
             if error_msg != "":
                 result_df["Errors in Rheo 1s"] = error_msg
             df = result_df
+        except NeedsReview as e:
+            review_msg = str(e)
         except Exception as e:
             error_msg = str(e)
             df["Errors in Rheo 1s"] = error_msg
@@ -108,9 +127,9 @@ def run_task(task: dict, output_base_dir: str) -> pd.DataFrame:
             error_msg = str(e)
             df["Errors in Short Rheo 5ms"] = error_msg
 
-    return task, df, isi_df
+    return task, df, isi_df, review_msg
 
-def multiprocess(folder_paths, output_dir, dvdt=20, get_rheo1s_freq=False, status_label=None, root=None, status_callback=None):
+def multiprocess(folder_paths, output_dir, dvdt=20, get_rheo1s_freq=False, check_flagged=False, status_label=None, root=None, status_callback=None, error_callback=None, threshold_window_callback=None, ap_count_window_callback=None):
     """Run analysis on multiple ABF files in parallel using multiprocessing.
     
     Parameters
@@ -121,13 +140,21 @@ def multiprocess(folder_paths, output_dir, dvdt=20, get_rheo1s_freq=False, statu
         Base directory to save the analysis results.
     dvdt : float, optional
         dV/dt threshold used for AP detection, by default 20.
+    check_flagged : bool, optional
+        If True, files flagged during analysis (e.g. a suspicious Rheo 1s threshold) open the
+        check window for the user. If False, the run never stops for input. By default False.
     status_label : tk.Label, optional
         A Tkinter Label widget to display status updates, by default None.
     root : tk.Tk, optional
         The Tkinter root window, used for updating the UI, by default None.
     status_callback : callable, optional
         A callback function for status updates, used for thread-safe UI updates, by default None.
-    
+    threshold_window_callback : callable, optional
+        Bridge for opening the threshold window on the GUI thread. Workers can't use it, so
+        files a worker flags for review (``NeedsReview``) are re-run in this process with it.
+    ap_count_window_callback : callable, optional
+        Bridge for opening the AP count window on the GUI thread, used the same way.
+
     Returns
     -------
     None
@@ -148,7 +175,7 @@ def multiprocess(folder_paths, output_dir, dvdt=20, get_rheo1s_freq=False, statu
             tasks.append({"file_path": f, "protocol": "RMP", "dvdt": dvdt})
     if folder_paths[1] != "No Folder":
         for f in list_abf_files(folder_paths[1]):
-            tasks.append({"file_path": f, "protocol": "Rheo 1s", "dvdt": dvdt, "get_rheo1s_freq": get_rheo1s_freq})
+            tasks.append({"file_path": f, "protocol": "Rheo 1s", "dvdt": dvdt, "get_rheo1s_freq": get_rheo1s_freq, "check_flagged": check_flagged})
     if folder_paths[2] != "No Folder":
         for f in list_abf_files(folder_paths[2]):
             tasks.append({"file_path": f, "protocol": "Rheo 4x", "dvdt": dvdt})
@@ -181,7 +208,19 @@ def multiprocess(folder_paths, output_dir, dvdt=20, get_rheo1s_freq=False, statu
     with ProcessPoolExecutor(max_workers=max_workers, max_tasks_per_child=1) as executor:
         future_to_task = [executor.submit(run_task, task, output_dir) for task in tasks]
         for future in as_completed(future_to_task):
-            task, result_df, isi_df = future.result()
+            task, result_df, isi_df, review_msg = future.result()
+            if review_msg is not None:
+                # The worker flagged this file but can't open a window, so re-run it here,
+                # where the callbacks can show the window on the GUI thread. The pool keeps
+                # processing the remaining files in the background meanwhile.
+                print(f"Flagged for review: {task['file_path']} ({review_msg})")
+                set_status(f"Review needed: {os.path.basename(task['file_path'])}", "orange")
+                task, result_df, isi_df, _ = run_task(
+                    task, output_dir,
+                    threshold_window_callback=threshold_window_callback,
+                    ap_count_window_callback=ap_count_window_callback,
+                    interactive=True,
+                )
             if task["protocol"] == "RMP":
                 rmp_results.append(result_df)
             elif task["protocol"] == "Rheo 1s":

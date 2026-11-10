@@ -34,6 +34,13 @@ def window_button(check_threshold_window):
 
 
 
+def sweep_decrease(check_threshold_window):
+    """Handle the event when the user opts to check the previous sweep, setting the decision variable accordingly and closing the window."""
+    global decision
+    decision = 3
+    check_threshold_window.destroy()
+
+
 def sweep_increase(check_threshold_window):
     """Handle the event when the user opts to check the next sweep, setting the decision variable accordingly and closing the window."""
     global decision
@@ -42,7 +49,7 @@ def sweep_increase(check_threshold_window):
 
 
 
-def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep_y, threshold_index, curr_start_index, current_end_index):
+def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep_y, threshold_index, curr_start_index, current_end_index, file_name=None, sweep_index=None):
     """Display a GUI window for the user to verify the calculated threshold and optionally specify a search window for recalculating the threshold.
     Parameters
     ----------
@@ -62,11 +69,15 @@ def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep
         Index of the start of the current injection within the sweep data.
     current_end_index : int
         Index of the end of the current injection within the sweep data.
+    file_name : str, optional
+        Path of the file being analyzed, shown above the plots.
+    sweep_index : int, optional
+        Index of the sweep being shown, displayed above the plots.
     
     Returns
     -------
     tuple
-        A tuple containing the user's decision (1 for threshold is good, 0 for search in window, 2 for check next sweep) and the potentially updated upper and lower bounds of the search window.
+        A tuple containing the user's decision (1 for threshold is good, 0 for search in window, 2 for check next sweep, 3 for check previous sweep) and the potentially updated upper and lower bounds of the search window.
     """
     global decision
     global window_width
@@ -100,8 +111,17 @@ def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep
         check_threshold_window.grid_columnconfigure(col, weight=1)
     check_threshold_window.grid_rowconfigure(1, weight=1)
 
-    title_label = tk.Label(check_threshold_window, text="Verify the Calculated Threshold", font=title_font)
-    title_label.grid(column=0, columnspan=6, row=0)
+    # Title + "file: sweep n" subtitle stacked in one frame so the rest of the grid keeps its rows.
+    title_frame = tk.Frame(check_threshold_window)
+    title_frame.grid(column=0, columnspan=6, row=0)
+    title_label = tk.Label(title_frame, text="Verify the Calculated Threshold", font=title_font)
+    title_label.pack()
+    if file_name is not None:
+        subtitle = os.path.basename(file_name)
+        if sweep_index is not None:
+            subtitle += f": sweep {sweep_index}"
+        file_label = tk.Label(title_frame, text=subtitle, font=text_font)
+        file_label.pack()
 
     frame_left = tk.Frame(check_threshold_window, highlightbackground="black", highlightthickness=1)
     frame_left.grid(row=1, column=0, columnspan=3, sticky="nsew")
@@ -168,6 +188,9 @@ def check_thresh_window(check_thresh, upper_window, lower_window, sweep_x, sweep
     button_thresh_good = tk.Button(check_threshold_window, text="Threshold is good!", width=20, height=1, bg="grey", fg="black",
                                     command=lambda: thresh_good_button(check_threshold_window), font=text_font)
     button_thresh_good.grid(column=2, columnspan=2, row=4, sticky='s', pady=(5, 10))
+    button_sweep_decrease = tk.Button(check_threshold_window, text="Check previous sweep", width=20, height=1, bg="grey", fg="black",
+                                    command=lambda: sweep_decrease(check_threshold_window), font=text_font)
+    button_sweep_decrease.grid(column=4, columnspan=2, row=3, sticky='s', pady=(5, 0))
     button_sweep_increase = tk.Button(check_threshold_window, text="Check next sweep", width=20, height=1, bg="grey", fg="black",
                                     command=lambda: sweep_increase(check_threshold_window), font=text_font)
     button_sweep_increase.grid(column=4, columnspan=2, row=4, sticky='s', pady=(5, 10))

@@ -248,6 +248,14 @@ def launch_gui(root):
             for i in range(6):
                 change_buttons[i].config(text="Change Folder")
                 clear_buttons[i].config(text="Clear Folder")
+
+            # Swap the verification checkboxes for the flagged-file checkbox.
+            # Lock both rows' heights first so the window doesn't shrink.
+            root.grid_rowconfigure(10, minsize=threshold_check.winfo_height())
+            root.grid_rowconfigure(12, minsize=ap_count_check.winfo_height())
+            threshold_check.grid_remove()
+            ap_count_check.grid_remove()
+            flagged_check.grid()
         else:
             # Single-cell mode
             process_bool.set(False)
@@ -262,6 +270,10 @@ def launch_gui(root):
                 change_buttons[i].config(text="Change File")
                 clear_buttons[i].config(text="Clear File")
 
+            flagged_check.grid_remove()
+            threshold_check.grid()
+            ap_count_check.grid()
+
     def on_enter():
         """Start analysis using current UI selections and mode.
         """
@@ -274,6 +286,7 @@ def launch_gui(root):
             output_dir = output_filename.get()
             dvdt = int(dvdt_value.get())
             get_rheo1s_freq = check_rheo1s_freq.get()
+            check_flagged_value = check_flagged.get()
 
             def bulk_worker():
                 """Execute bulk analysis work in a worker thread.
@@ -284,7 +297,11 @@ def launch_gui(root):
                     output_dir=output_dir,
                     dvdt=dvdt,
                     get_rheo1s_freq=get_rheo1s_freq,
-                    status_callback=schedule_status
+                    check_flagged=check_flagged_value,
+                    status_callback=schedule_status,
+                    error_callback=schedule_error,
+                    threshold_window_callback=invoke_on_main_thread,
+                    ap_count_window_callback=invoke_on_main_thread
                 )
 
             start_background_task(run_button, bulk_worker)
@@ -347,6 +364,7 @@ def launch_gui(root):
         config["check_threshold"] = check_threshold.get()
         config["check_rheo1s_freq"] = check_rheo1s_freq.get()
         config["check_ap_counts"] = check_ap_counts.get()
+        config["check_flagged"] = check_flagged.get()
         config["open_excel"] = open_excel.get()
         config["open_phase"] = open_phase.get()
         save_config(config)
@@ -440,6 +458,14 @@ def launch_gui(root):
         check_ap_counts.set(bool(config["check_ap_counts"]))
     ap_count_check = tk.Checkbutton(root, text="Verify AP Counts", font=("Verdana", 12), variable=check_ap_counts)
     ap_count_check.grid(row=12, column=2, columnspan=3, sticky='w')
+
+    # Batch-mode only: shown in place of the two verification checkboxes (see apply_mode).
+    check_flagged = tk.BooleanVar()
+    if "check_flagged" in config:
+        check_flagged.set(bool(config["check_flagged"]))
+    flagged_check = tk.Checkbutton(root, text="Check Flagged Files", font=("Verdana", 12), variable=check_flagged)
+    flagged_check.grid(row=10, column=2, columnspan=3, sticky='w')
+    flagged_check.grid_remove()
 
     open_excel = tk.BooleanVar(value=True)
     if "open_excel" in config:
