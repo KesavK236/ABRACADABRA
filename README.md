@@ -42,7 +42,7 @@ ABRACADABRA offers a high-throughput standardized analysis of current-clamp reco
 
 ### Windows executable
 Download the latest .exe from the [Releases page](https://github.com/KesavK236/ABRACADABRA/releases).
-The first time you run it, Windows Defender SmartScreen may show a "Windows protected your PC" warning because the app isn't code-signed. Click **More info**, then **Run anyway**.
+The first time you run it, Windows Defender SmartScreen may show a "Windows protected your PC" warning because the app isn't code-signed. Click **More info**, then **Run anyway**. If you're computer does not allow you to run, open the app properties and under the General Tab, find the Security section and click **Unblock**.
 
 ### From source
 ```bash
