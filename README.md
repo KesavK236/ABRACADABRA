@@ -282,8 +282,8 @@ Open an issue on [GitHub Issues](https://github.com/KesavK236/ABRACADABRA/issues
 
 ## Version History
 
-- **1.0** (2026-11-10)
-  - Initial release
+- **0.0** (2026-11-10)
+  - Initial Prerelease
 
 ## Citation
 The accompanying paper is in preparation. Until it is published, please cite this repository:
