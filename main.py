@@ -5,7 +5,8 @@ import sys
 import os
 import ctypes
 
-# pyinstaller main.py --clean --onefile --noconsole --icon=assets/ABRACADABRA.ico --name ABRACADABRA --noconfirm --add-data "assets;assets" --collect-data hdmf --collect-data pynwb --collect-submodules hdmf --collect-submodules pynwb --collect-all neuroconv --collect-all ndx_dandi_icephys 
+# Build: pyinstaller main.spec --clean --noconfirm   (one-folder build -> dist\ABRACADABRA\)
+# Installer: compile installer\ABRACADABRA.iss with Inno Setup 6
 
 def resource_path(relative_path):
     """Resolve an asset path for source and PyInstaller builds.

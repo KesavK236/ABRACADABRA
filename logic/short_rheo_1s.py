@@ -383,10 +383,10 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
         print(f"Upstroke-Downstroke ratio: {rise_time_10_90 / fall_time_10_90}")
         df["Upstroke-Downstroke ratio 1s"] = rise_time_10_90 / fall_time_10_90
 
-        # # for revision data
-        # num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=sweep_index - 1, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
-        # print(f"SubThreshold peak voltage (mV): {np.max(sweep_y_raw[curr_start_index:curr_end_index])}")
-        # df["SubThreshold peak voltage (mV)"] = np.max(sweep_y_raw[curr_start_index:curr_end_index])
+        # for revision data
+        num_sweeps, sweep_x, sweep_y, sweep_y_raw, sweep_c, __,  x_label, y_label, c_label, loaded, sample_rate, current_units, current_record = load_abf(file_name, sweep_num=sweep_index - 1, smooth=True, loaded=loaded, protocol="rheo", current_record=current_record)
+        print(f"SubThreshold peak voltage (mV): {np.max(sweep_y_raw[curr_start_index:curr_end_index])}")
+        df["SubThreshold peak voltage (mV)"] = np.max(sweep_y_raw[curr_start_index:curr_end_index])
 
 
     if get_rheo1s_freq and threshold_checked == 1:

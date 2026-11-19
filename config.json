@@ -1,0 +1,9 @@
+{
+    "dvdt_value": "10",
+    "check_threshold": true,
+    "check_rheo1s_freq": false,
+    "check_ap_counts": false,
+    "open_excel": true,
+    "open_phase": false,
+    "check_flagged": true
+}
