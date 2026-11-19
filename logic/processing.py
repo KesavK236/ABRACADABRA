@@ -184,7 +184,7 @@ def num_sweeps(abf):
     return abf.sweepCount
 
 
-def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c, sweep_stim, units="pA"):
+def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c, units="pA"):
     """
     Identifies the start and end indices of current injection in a Rheo protocol sweeps.
     Parameters
@@ -199,8 +199,6 @@ def current_injection_points_rheo(abf, sample_rate, sweep_ind, sweep_x, sweep_c,
         The time points of the sweep in seconds.
     sweep_c : 1D numpy array
         The current values of the sweep in pA or nA.
-    sweep_stim : 1D numpy array
-        The stimulus values of the sweep in pA or nA.
     units : str, optional
         The units of the current values ("pA" or "nA"). Default is "pA".
     Returns

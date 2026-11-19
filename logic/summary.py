@@ -214,7 +214,7 @@ def callback(
         except Exception as e:
             set_error(5, e)
 
-    version = 1.1
+    version = "0.0.0"
 
     print(f"ABRACADABRA Version: {version}")
     output_df["ABRACADABRA Version"] = version

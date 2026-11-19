@@ -28,6 +28,9 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 if __name__ == "__main__":
+    # Must run first in a frozen exe so worker processes exit before creating a Tk window
+    multiprocessing.freeze_support()
+
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
     root = tk.Tk()
     root.tk.call("tk", "scaling", 1.25)
@@ -39,8 +42,6 @@ if __name__ == "__main__":
         root.iconbitmap(icon_path)
     except Exception:
         print("Icon Not found, continuing without it")
-
-    multiprocessing.freeze_support()
 
     launch_gui(root)
 

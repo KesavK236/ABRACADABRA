@@ -40,13 +40,9 @@ ABRACADABRA offers a high-throughput standardized analysis of current-clamp reco
 
 ## Installation
 
-A standalone Windows executable is coming soon and will be posted on the [Releases page](https://github.com/KesavK236/ABRACADABRA/releases). For now, install from source:
-
-<!-- When the .exe is released, add:
 ### Windows executable
-Download the latest .exe from the Releases page.
-The first time you run it, Windows Defender SmartScreen may show a "Windows protected your PC" warning because the app isn't code-signed. Click **More info**, then **Run anyway**.
--->
+Download the latest .exe from the [Releases page](https://github.com/KesavK236/ABRACADABRA/releases).
+The first time you run it, Windows Defender SmartScreen may show a "Windows protected your PC" warning because the app isn't code-signed. Click **More info**, then **Run anyway**. If you're computer does not allow you to run, open the app properties and under the General Tab, find the Security section and click **Unblock**.
 
 ### From source
 ```bash
@@ -286,8 +282,8 @@ Open an issue on [GitHub Issues](https://github.com/KesavK236/ABRACADABRA/issues
 
 ## Version History
 
-- **1.0** (2026-11-10)
-  - Initial release
+- **0.0** (2026-11-10)
+  - Initial Prerelease
 
 ## Citation
 The accompanying paper is in preparation. Until it is published, please cite this repository:

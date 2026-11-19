@@ -489,6 +489,6 @@ def short_rheo_1s(file_name, df, isi_df, dvdt=20, check_threshold=False, get_rhe
         folder=output_dir
     )
 
-    phase_plane_table = phase_plane(sweep_x, sweep_y_raw, sweep_y_d, df, step="1s", output_dir=output_dir)
+    phase_plane_table = phase_plane(sweep_x, sweep_y_raw, sweep_y_d, sweep_c, current_units, df, step="1s", output_dir=output_dir)
 
     return df, isi_df, phase_plane_table, error_msg

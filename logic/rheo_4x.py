@@ -67,7 +67,7 @@ def rheo_4x(file_name, df, dvdt=20, check_ap_counts=False, output_dir=os.getcwd(
         elif "pA" in units:
                 current_units = "pA"
 
-        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, i, sweep_x, sweep_c, sweep_stim, current_units)
+        curr_start_index, curr_end_index, holding_curr, stim_curr = current_injection_points_rheo(loaded, sample_rate, i, sweep_x, sweep_c, current_units)
 
         j = curr_start_index - 100
         ap_found = 0
